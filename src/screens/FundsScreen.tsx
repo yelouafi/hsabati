@@ -38,7 +38,9 @@ function FundNumbers({ fund, large }: { fund: Fund; large?: boolean }) {
     <div class={`fund-numbers ${large ? 'lg' : ''}`}>
       <div><span class="muted">Reçu</span><b>{money0(s.received)}</b></div>
       <div><span class="muted">Dépensé</span><b>{money0(s.spent)}</b></div>
-      <div class={`solde ${s.solde < 0 ? 'neg' : ''}`}><span class="muted">Solde</span><b>{signed(s.solde)} <small>MAD</small></b></div>
+      {incomesOf(fund.id).length
+        ? <div class={`solde ${s.solde < 0 ? 'neg' : ''}`}><span class="muted">Solde</span><b>{signed(s.solde)} <small>MAD</small></b></div>
+        : <div class="solde none"><span class="muted">Solde</span><b>Ajoutez une recette</b></div>}
     </div>
   );
 }

@@ -14,6 +14,8 @@ export type Fund = {
   createdAt: number;
   updatedAt?: number;
   deleted?: boolean;
+  /** Created by the app on first launch (« Maison »), not by her. */
+  starter?: boolean;
 };
 
 export type Project = {

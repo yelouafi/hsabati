@@ -106,6 +106,7 @@ h2 { font-size: 18px; }
 .icon-btn svg { width: 20px; height: 20px; }
 .link { color: var(--accent); font-weight: 800; padding: 4px 0; text-align: left; }
 .link.danger { color: var(--danger); margin-top: 8px; }
+.link.more-options { font-size: 14px; align-self: flex-start; }
 
 /* ---------- add screen ---------- */
 .add {
@@ -247,6 +248,7 @@ h2 { font-size: 18px; }
 .fund-numbers .solde b { font: 600 21px/1.2 var(--serif); }
 .fund-numbers .solde small { font: 800 12px var(--sans); color: var(--muted); }
 .fund-numbers .solde.neg b { color: var(--danger); }
+.fund-numbers .solde.none b, .fund-numbers.lg .solde.none b { font: 800 13px/1.3 var(--sans); color: var(--accent); white-space: normal; padding-top: 3px; }
 .fund-numbers.lg { margin: 0; }
 .fund-numbers.lg b { font-size: 18px; }
 .fund-numbers.lg .solde b { font-size: 28px; }

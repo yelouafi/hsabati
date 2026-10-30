@@ -95,6 +95,28 @@ export async function load(): Promise<void> {
   incomes.value = is;
   const saved = meta.find(m => m.id === 'settings');
   if (saved) settings.value = { ...settings.value, ...saved };
+  if (!liveFunds.value.length) await seedStarter();
+}
+
+/**
+ * A first launch gets the caisse « Maison » with the poste « Divers », so she
+ * can type an amount and save right away, before learning any of the words.
+ */
+async function seedStarter(): Promise<void> {
+  const fund = await saveFund({ ...newFund('Maison'), starter: true });
+  const poste = await saveProject(newProject('Divers', 0, fund.id));
+  await saveSettings({ lastFundId: fund.id, lastProjectId: poste.id });
+}
+
+/** Remove the starter caisse while still unused, e.g. once real data is restored or imported elsewhere. */
+export async function dropUnusedStarter(keepFundId?: string): Promise<void> {
+  for (const f of liveFunds.value) {
+    if (!f.starter || f.id === keepFundId || incomesOf(f.id).length) continue;
+    const postes = projectsOf(f.id);
+    if (postes.some(p => expensesOf(p.id).length)) continue;
+    for (const p of postes) await saveProject({ ...p, deleted: true });
+    await saveFund({ ...f, deleted: true });
+  }
 }
 
 function upsert<T extends { id: string }>(list: T[], rec: T): T[] {
@@ -180,6 +202,7 @@ export async function mergeIn(data: Backup): Promise<number> {
   projects.value = await merge('projects', projects.value, data.projects);
   expenses.value = await merge('expenses', expenses.value, data.expenses);
   incomes.value = await merge('incomes', incomes.value, data.incomes);
+  if (data.funds?.some(f => !f.deleted)) await dropUnusedStarter();
   return changed;
 }
 
@@ -190,6 +213,7 @@ export async function eraseAll(): Promise<void> {
   projects.value = [];
   expenses.value = [];
   incomes.value = [];
+  await seedStarter();
 }
 
 export function backupData(): Backup {
