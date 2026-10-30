@@ -1,7 +1,8 @@
 import { useEffect } from 'preact/hooks';
 import { settings } from './lib/store';
 import { applyTheme } from './lib/theme';
-import { closeSheet, hash, hideToast, sheetContent, sheetOpen, toastState, toastVisible } from './lib/ui';
+import { hash, hideToast, toastState, toastVisible } from './lib/ui';
+import { Sheet } from './components/Sheet';
 import { Icon } from './components/common';
 import { AddScreen } from './screens/AddScreen';
 import { FundScreen, FundsScreen, ProjectScreen } from './screens/FundsScreen';
@@ -42,13 +43,7 @@ export function App() {
         ))}
       </nav>
 
-      <div class={`sheet ${sheetOpen.value ? 'open' : ''}`} hidden={!sheetContent.value}>
-        <div class="sheet-backdrop" onClick={() => closeSheet()} />
-        <div class="sheet-panel" role="dialog" aria-modal="true">
-          <div class="sheet-grip" />
-          {sheetContent.value}
-        </div>
-      </div>
+      <Sheet />
 
       <div class={`toast ${toastVisible.value ? 'show' : ''}`} role="status" hidden={!t}>
         {t && (
