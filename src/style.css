@@ -336,14 +336,17 @@ h2 { font-size: 18px; }
 .form input[type=date] { -webkit-appearance: none; appearance: none; min-width: 0; display: block; min-height: 48px; text-align: left; }
 .form input[type=date]::-webkit-date-and-time-value { text-align: left; }
 .form input:focus, .form textarea:focus { box-shadow: 0 0 0 2px var(--accent); }
-.form-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.form-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px; }
 .form-actions .btn-primary { flex: 1; max-width: 240px; margin-left: auto; }
-.manage-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
-.swatches { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.side-actions { display: flex; gap: 2px; flex-wrap: wrap; }
+.btn-text { padding: 10px 8px; font-weight: 800; font-size: 15px; color: var(--muted); border-radius: 10px; }
+.btn-text.danger { color: var(--danger); }
+.btn-text:active { background: var(--surface-2); }
+.swatches { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .swatches legend { font-size: 14px; color: var(--muted); font-weight: 700; margin-bottom: 8px; padding: 0; }
 .form .swatches label { display: block; }
 .swatches input { position: absolute; opacity: 0; }
-.swatches i { display: block; width: 32px; height: 32px; border-radius: 50%; background: var(--c); transition: transform .15s; }
+.swatches i { display: block; width: 30px; height: 30px; border-radius: 50%; background: var(--c); transition: transform .15s; }
 .swatches input:checked + i { transform: scale(1.1); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--c); }
 
 .preview { display: flex; flex-direction: column; gap: 4px; }
