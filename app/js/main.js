@@ -271,6 +271,7 @@ function renderAdd(editId) {
           aria-checked="${p.id === d.projectId}" data-project="${p.id}" style="--c:${p.color}">
           <i></i>${h(p.name)}
         </button>`).join('')}
+      <button type="button" class="chip chip-more" data-act="more-projects" hidden></button>
       <button type="button" class="chip chip-add" data-act="new-project">${projects.length ? '+' : '+ Créer mon premier projet'}</button>
     </div>
 
@@ -394,22 +395,51 @@ function renderAdd(editId) {
     $('.date-chip', view).classList.toggle('past', d.date !== todayISO());
   });
 
-  view.querySelector('.chips').addEventListener('click', e => {
-    const chip = e.target.closest('[data-project]');
-    if (!chip) return;
-    d.projectId = chip.dataset.project;
-    view.querySelectorAll('.chip[data-project]').forEach(c => {
-      const on = c === chip;
+  // Chips stay on at most two rows: when there are too many projects, the
+  // least recently used ones hide behind an "Autres" chip (the selected one
+  // always stays visible).
+  const chipsEl = $('.chips', view);
+  const moreBtn = $('[data-act="more-projects"]', view);
+  const lastUse = new Map(projects.map(p => [p.id, Math.max(p.createdAt, ...expensesOf(p.id).map(e => e.createdAt))]));
+  const fitChips = () => {
+    const chips = [...chipsEl.querySelectorAll('[data-project]')];
+    chips.forEach(c => { c.hidden = false; });
+    moreBtn.hidden = true;
+    const rows = () => new Set([...chipsEl.children].filter(c => !c.hidden).map(c => c.offsetTop)).size;
+    if (rows() <= 2) return;
+    moreBtn.hidden = false;
+    const leastUsed = chips.filter(c => c.dataset.project !== d.projectId)
+      .sort((a, b) => lastUse.get(a.dataset.project) - lastUse.get(b.dataset.project));
+    let hidden = 0;
+    for (const c of leastUsed) {
+      c.hidden = true;
+      moreBtn.textContent = `Autres · ${++hidden}`;
+      if (rows() <= 2) break;
+    }
+  };
+  const select = id => {
+    d.projectId = id;
+    chipsEl.querySelectorAll('.chip[data-project]').forEach(c => {
+      const on = c.dataset.project === id;
       c.classList.toggle('on', on);
       c.setAttribute('aria-checked', on);
     });
+    if (chipsEl.querySelector(`[data-project="${id}"]`)?.hidden) fitChips();
     refresh();
+  };
+  fitChips();
+  window.onresize = fitChips;
+
+  chipsEl.addEventListener('click', e => {
+    const chip = e.target.closest('[data-project]');
+    if (chip) select(chip.dataset.project);
   });
 
   view.onclick = async e => {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'back') history.back();
     if (act === 'new-project') projectSheet(null, p => { d.projectId = p.id; renderAdd(editId); });
+    if (act === 'more-projects') pickProjectSheet(projects, d.projectId, select);
     if (act === 'delete') {
       editing.deleted = true;
       await saveExpense(editing);
@@ -555,6 +585,28 @@ function renderProject(id) {
     if (act === 'edit') projectSheet(p, () => renderProject(id));
     if (act === 'add') { state.draft.projectId = id; location.hash = '#/'; }
   };
+}
+
+function pickProjectSheet(projects, current, onPick) {
+  openSheet(`
+    <h2>Choisir un projet</h2>
+    <div class="card rows pick-list">
+      ${projects.map(p => {
+        const b = budgetLine(p);
+        return `
+        <button type="button" class="row ${p.id === current ? 'on' : ''}" data-pick="${p.id}" style="--c:${p.color}">
+          <span><i></i>${h(p.name)}</span>
+          <small class="muted">${money0(b.spent)}${p.budget ? ` / ${money0(p.budget)}` : ''} MAD</small>
+        </button>`;
+      }).join('')}
+    </div>`, panel => {
+    panel.addEventListener('click', async e => {
+      const id = e.target.closest('[data-pick]')?.dataset.pick;
+      if (!id) return;
+      await closeSheet();
+      onPick(id);
+    });
+  });
 }
 
 function projectSheet(p, onSaved) {
