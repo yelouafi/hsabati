@@ -79,8 +79,8 @@ export function fundStatus(f: Fund): FundStatus {
   return { received, spent, solde: Math.round((received - spent) * 100) / 100 };
 }
 
-/** A caisse can be deleted only when nothing depends on it. */
-export const fundIsEmpty = (f: Fund) => !projectsOf(f.id).length && !incomesOf(f.id).length;
+/** A caisse can be deleted only when nothing was recorded in it (empty postes don't count). */
+export const fundIsEmpty = (f: Fund) => !incomesOf(f.id).length && projectsOf(f.id).every(p => !expensesOf(p.id).length);
 
 // ---------------------------------------------------------------- actions
 
@@ -103,19 +103,26 @@ export async function load(): Promise<void> {
  * can type an amount and save right away, before learning any of the words.
  */
 async function seedStarter(): Promise<void> {
-  const fund = await saveFund({ ...newFund('Maison'), starter: true });
-  const poste = await saveProject(newProject('Divers', 0, fund.id));
+  const { fund, poste } = await createFund({ ...newFund('Maison'), starter: true });
   await saveSettings({ lastFundId: fund.id, lastProjectId: poste.id });
+}
+
+/** A new caisse comes with a « Divers » poste, so it can take dépenses right away. */
+export async function createFund(f: Fund): Promise<{ fund: Fund; poste: Project }> {
+  const fund = await saveFund(f);
+  return { fund, poste: await saveProject(newProject('Divers', 0, fund.id)) };
+}
+
+/** Delete a caisse along with its postes (only when fundIsEmpty). */
+export async function deleteFund(f: Fund): Promise<void> {
+  for (const p of projectsOf(f.id)) await saveProject({ ...p, deleted: true });
+  await saveFund({ ...f, deleted: true });
 }
 
 /** Remove the starter caisse while still unused, e.g. once real data is restored or imported elsewhere. */
 export async function dropUnusedStarter(keepFundId?: string): Promise<void> {
   for (const f of liveFunds.value) {
-    if (!f.starter || f.id === keepFundId || incomesOf(f.id).length) continue;
-    const postes = projectsOf(f.id);
-    if (postes.some(p => expensesOf(p.id).length)) continue;
-    for (const p of postes) await saveProject({ ...p, deleted: true });
-    await saveFund({ ...f, deleted: true });
+    if (f.starter && f.id !== keepFundId && fundIsEmpty(f)) await deleteFund(f);
   }
 }
 

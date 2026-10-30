@@ -3,7 +3,7 @@ import { parseAmount } from '../lib/parse';
 import { aiPrompt, parseImport, type ImportEntry, type ImportError, type ImportPoste } from '../lib/importFormat';
 import { money, money0, todayISO } from '../lib/format';
 import {
-  PROJECT_COLORS, activeFunds, budgetStatus, dropUnusedStarter, expensesOf, findFundByName, findProjectByName, fundById, fundIsEmpty,
+  PROJECT_COLORS, activeFunds, budgetStatus, createFund, deleteFund, dropUnusedStarter, expensesOf, findFundByName, findProjectByName, fundById, fundIsEmpty,
   fundStatus, liveFunds, liveProjects, newExpense, newFund, newIncome, newProject, now, projectsOf,
   saveExpense, saveFund, saveIncome, saveProject, settings,
 } from '../lib/store';
@@ -162,20 +162,20 @@ export function FundForm({ fund, onSaved }: { fund?: Fund; onSaved?: (f: Fund) =
     e.preventDefault();
     if (!name.trim()) return;
     const fields = { name: name.trim(), color };
-    const saved = await saveFund(fund ? { ...fund, ...fields } : { ...newFund(fields.name), ...fields });
+    const saved = fund ? await saveFund({ ...fund, ...fields }) : (await createFund({ ...newFund(fields.name), ...fields })).fund;
     await closeSheet();
     onSaved?.(saved);
-    if (!editing) toast(<>Caisse <b>{saved.name}</b> créée</>);
+    if (!editing) toast(<>Caisse <b>{saved.name}</b> créée, avec un poste <b>Divers</b></>);
   };
 
   const remove = async () => {
     if (!fund) return;
     if (!canDelete) {
-      toast('Une caisse avec des postes ou des recettes ne peut pas être supprimée : archivez-la.');
+      toast('Une caisse avec des dépenses ou des recettes ne peut pas être supprimée : archivez-la.');
       return;
     }
     if (!confirm(`Supprimer la caisse « ${fund.name} » ?`)) return;
-    await saveFund({ ...fund, deleted: true });
+    await deleteFund(fund);
     await closeSheet();
     go('#/caisses');
   };
