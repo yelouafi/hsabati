@@ -21,8 +21,21 @@
 [data-accent="sauge"]      { --accent: #5e9a7a; --accent-soft: #e0eee6; }
 [data-accent="prune"]      { --accent: #a0527a; --accent-soft: #f3e0ea; }
 
+/* Dark: chosen explicitly, or "auto" following the phone. */
+:root[data-theme="dark"] {
+  --bg: #1d181b;
+  --surface: #282126;
+  --surface-2: #322a30;
+  --ink: #f5ecf0;
+  --muted: #ad9ca5;
+  --line: #3a3036;
+  --danger: #ef7d73;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 26px -14px rgb(0 0 0 / 0.6);
+  --accent-soft: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  color-scheme: dark;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #1d181b;
     --surface: #282126;
     --surface-2: #322a30;
@@ -34,7 +47,6 @@
     --accent-soft: color-mix(in srgb, var(--accent) 22%, var(--surface));
     color-scheme: dark;
   }
-  [data-accent] { --accent-soft: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -167,9 +179,10 @@ h2 { font-size: 18px; }
   height: clamp(44px, 6.6dvh, 60px); border-radius: 18px;
   background: var(--surface); box-shadow: var(--shadow);
   font: 600 26px var(--serif); display: grid; place-items: center;
-  user-select: none; transition: transform .08s, background .12s;
+  user-select: none;
 }
-.keypad button.pressed { transform: scale(.94); background: var(--accent-soft); }
+.keypad button.pressed { animation: keypress .18s ease-out; }
+@keyframes keypress { from { transform: scale(.94); background: var(--accent-soft); } }
 .keypad button[data-key=","], .keypad button[data-key="del"] { background: transparent; box-shadow: none; color: var(--muted); }
 .keypad svg { width: 26px; height: 26px; stroke-width: 1.8; }
 
@@ -226,6 +239,11 @@ h2 { font-size: 18px; }
 .empty-state .btn-primary { margin-top: 18px; }
 .empty-art { font-size: 54px; color: var(--accent); line-height: 1; margin-bottom: 12px; }
 
+.segmented { display: flex; gap: 4px; margin-top: 14px; padding: 4px; border-radius: 999px; background: var(--surface-2); }
+.segmented button { flex: 1; padding: 9px 0; border-radius: 999px; font-weight: 800; font-size: 15px; color: var(--muted); transition: background .15s, color .15s; }
+.segmented button.on { background: var(--surface); color: color-mix(in srgb, var(--accent) 85%, var(--ink)); box-shadow: var(--shadow); }
+:root[data-theme="dark"] .segmented button.on { background: var(--accent-soft); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .segmented button.on { background: var(--accent-soft); } }
 .accent-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 14px; }
 .accent-picker button { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--muted); }
 .accent-picker i { width: 40px; height: 40px; border-radius: 50%; display: block; transition: transform .15s, box-shadow .15s; }
@@ -309,6 +327,7 @@ h2 { font-size: 18px; }
   opacity: 0; transform: translateY(-16px); transition: opacity .2s, transform .25s cubic-bezier(.2, .8, .2, 1);
 }
 .toast.show { opacity: 1; transform: none; }
+.toast:not(.show) { pointer-events: none; }
 .toast button { color: var(--accent-soft); font-weight: 800; flex: none; padding: 4px; }
 
 .burst { position: fixed; pointer-events: none; z-index: 40; width: 0; height: 0; }

@@ -1,13 +1,19 @@
 // Parsing of free-form amounts ("1 500", "1.500,50 dh", "1,5k", "300+150")
 // and of notes pasted from the phone ("Projet\nmenuisier: 1500\n...").
 
+export type ParsedExpense = { label: string; amount: number };
+export type NoteLine =
+  | { type: 'expense'; raw: string; label: string; amount: number }
+  | { type: 'header'; raw: string; name: string };
+export type NoteGroup = { name: string; expenses: ParsedExpense[] };
+
 const CURRENCY = /\b(dhs?|mad|dirhams?)\b|dh/gi;
 
 // One number token: digits with optional space/./, separators, optional k suffix.
 const NUMBER = /\d[\d\s.,  ]*\d|\d/;
 
 /** Parse a single number token into a float, or null. */
-function parseNumber(raw) {
+function parseNumber(raw: string): number | null {
   let s = raw.replace(/[\s  ]/g, '');
   if (!/^\d[\d.,]*$/.test(s)) return null;
   const dots = (s.match(/\./g) || []).length;
@@ -34,7 +40,7 @@ function parseNumber(raw) {
  * currency words, a "k" suffix and simple sums ("300 + 150").
  * Returns a number rounded to 2 decimals, or null when nothing parses.
  */
-export function parseAmount(input) {
+export function parseAmount(input: string | null | undefined): number | null {
   if (input == null) return null;
   const text = String(input).replace(CURRENCY, ' ').trim();
   if (!text) return null;
@@ -56,7 +62,7 @@ export function parseAmount(input) {
  * Split an expense line into { label, amount }.
  * "menuisier: 1500" | "menuisier 1500" | "1500 menuisier" | "menuisier - 1 500 dh"
  */
-export function parseExpenseLine(line) {
+export function parseExpenseLine(line: string): ParsedExpense | null {
   const clean = line.replace(/^[\s\-–•*·]+/, '').trim();
   if (!clean) return null;
   const colon = clean.lastIndexOf(':');
@@ -86,7 +92,7 @@ export function parseExpenseLine(line) {
   return null;
 }
 
-function tidyLabel(s) {
+function tidyLabel(s: string): string {
   return s.replace(/[\s:=\-–]+$/, '').replace(/^[\s:=\-–]+/, '').trim();
 }
 
@@ -96,8 +102,8 @@ function tidyLabel(s) {
  * an amount ≥ 10 at the end/start. Anything else that is not blank is a header
  * ("project 1", "Cuisine", "Salon :"). The UI lets the user flip any line.
  */
-export function parseNotes(text) {
-  const out = [];
+export function parseNotes(text: string): NoteLine[] {
+  const out: NoteLine[] = [];
   for (const raw of String(text).split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
@@ -113,9 +119,9 @@ export function parseNotes(text) {
 }
 
 /** Group parsed lines into [{ name, expenses: [{label, amount}] }]. */
-export function groupNotes(lines) {
-  const groups = [];
-  let current = null;
+export function groupNotes(lines: NoteLine[]): NoteGroup[] {
+  const groups: NoteGroup[] = [];
+  let current: NoteGroup | null = null;
   for (const l of lines) {
     if (l.type === 'header') {
       current = { name: l.name, expenses: [] };
