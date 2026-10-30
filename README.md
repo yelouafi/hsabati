@@ -11,15 +11,14 @@ et garde les données sur le téléphone.
 - **Saisie express** : l'app s'ouvre sur le pavé numérique, en mode
   **Dépense** (dernier poste déjà choisi) ; un bouton **Recette** pour l'argent
   reçu.
-- **Importer mes notes** : un format simple et sans ambiguïté (les notes en
-  désordre se remettent d'abord au propre avec une IA : bouton « Copier les
-  instructions pour l'IA ») :
+- **Importer mes notes** : dans une caisse choisie, un format simple et sans
+  ambiguïté (les notes en désordre se remettent d'abord au propre avec une IA :
+  bouton « Copier les instructions pour l'IA ») :
 
   ```
-  # Maison                    ← caisse
-  + 3000 salaire              ← recette
-  ## Alimentation             ← poste de la caisse au-dessus
-  - 450 courses               ← dépense
+  + 3000 salaire              ← recette dans la caisse
+  # Alimentation              ← poste
+  - 450 courses               ← dépense sur le poste au-dessus
   2026-10-12 - 300 boucher    ← date facultative
   // commentaire              ← ignoré
   ```

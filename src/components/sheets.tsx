@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { parseAmount } from '../lib/parse';
-import { aiPrompt, parseImport, type ImportCaisse, type ImportEntry, type ImportError } from '../lib/importFormat';
+import { aiPrompt, parseImport, type ImportEntry, type ImportError, type ImportPoste } from '../lib/importFormat';
 import { money, money0, todayISO } from '../lib/format';
 import {
   PROJECT_COLORS, activeFunds, budgetStatus, expensesOf, findFundByName, findProjectByName, fundById, fundIsEmpty,
@@ -73,7 +73,6 @@ export function ProjectForm({ project, fundId, onSaved }: { project?: Project; f
   const [fund, setFund] = useState<FundChoice>({ fundId: project?.fundId ?? fundId ?? defaultFundId(), newName: '' });
   const [budget, setBudget] = useState(project?.budget ? money(project.budget) : '');
   const [color, setColor] = useState(project?.color ?? PROJECT_COLORS[liveProjects.value.length % PROJECT_COLORS.length]);
-  const [archived, setArchived] = useState(project?.archived ?? false);
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -84,7 +83,7 @@ export function ProjectForm({ project, fundId, onSaved }: { project?: Project; f
     e.preventDefault();
     if (!name.trim() || !choiceReady(fund)) return;
     const fundId = (await resolveFund(fund))!;
-    const fields = { name: name.trim(), fundId, budget: parseAmount(budget) || 0, color, archived };
+    const fields = { name: name.trim(), fundId, budget: parseAmount(budget) || 0, color };
     const saved = await saveProject(project ? { ...project, ...fields } : { ...newProject(fields.name, fields.budget, fundId), ...fields });
     await closeSheet();
     onSaved?.(saved);
@@ -101,6 +100,15 @@ export function ProjectForm({ project, fundId, onSaved }: { project?: Project; f
     go(`#/caisse/${project.fundId}`);
   };
 
+  const setArchived = async (archived: boolean) => {
+    if (!project) return;
+    if (archived && !confirm(`Archiver le poste « ${project.name} » ?\nIl n’apparaîtra plus dans la saisie ; ses dépenses sont conservées.`)) return;
+    await saveProject({ ...project, archived });
+    await closeSheet();
+    toast(<>Poste <b>{project.name}</b> {archived ? 'archivé' : 'désarchivé'}</>,
+      { label: 'Annuler', run: () => saveProject({ ...project, archived: !archived }) });
+  };
+
   return (
     <>
       <h2>{editing ? 'Modifier le poste' : 'Nouveau poste'}</h2>
@@ -114,16 +122,15 @@ export function ProjectForm({ project, fundId, onSaved }: { project?: Project; f
           <input inputMode="decimal" placeholder="ex. 20 000" value={budget} onInput={e => setBudget(e.currentTarget.value)} />
         </label>
         <Swatches value={color} onChange={setColor} />
-        {editing && (
-          <label class="switch">
-            <input type="checkbox" checked={archived} onChange={e => setArchived(e.currentTarget.checked)} />
-            <span>Poste terminé (masqué de la saisie)</span>
-          </label>
-        )}
         <div class="form-actions">
-          {editing
-            ? <button type="button" class="btn-ghost danger" onClick={remove}>Supprimer</button>
-            : <button type="button" class="btn-ghost" onClick={() => closeSheet()}>Annuler</button>}
+          {project ? (
+            <span class="side-actions">
+              <button type="button" class="btn-text" onClick={() => setArchived(!project.archived)}>
+                {project.archived ? 'Désarchiver' : 'Archiver'}
+              </button>
+              <button type="button" class="btn-text danger" onClick={remove}>Supprimer</button>
+            </span>
+          ) : <button type="button" class="btn-ghost" onClick={() => closeSheet()}>Annuler</button>}
           <button class="btn-primary" disabled={!name.trim() || !choiceReady(fund)}>{editing ? 'Enregistrer' : 'Créer'}</button>
         </div>
       </form>
@@ -137,7 +144,6 @@ export function FundForm({ fund, onSaved }: { fund?: Fund; onSaved?: (f: Fund) =
   const editing = !!fund;
   const [name, setName] = useState(fund?.name ?? '');
   const [color, setColor] = useState(fund?.color ?? PROJECT_COLORS[(liveFunds.value.length + 3) % PROJECT_COLORS.length]);
-  const [archived, setArchived] = useState(fund?.archived ?? false);
   const nameRef = useRef<HTMLInputElement>(null);
   const canDelete = !!fund && fundIsEmpty(fund);
 
@@ -148,7 +154,7 @@ export function FundForm({ fund, onSaved }: { fund?: Fund; onSaved?: (f: Fund) =
   const submit = async (e: Event) => {
     e.preventDefault();
     if (!name.trim()) return;
-    const fields = { name: name.trim(), color, archived };
+    const fields = { name: name.trim(), color };
     const saved = await saveFund(fund ? { ...fund, ...fields } : { ...newFund(fields.name), ...fields });
     await closeSheet();
     onSaved?.(saved);
@@ -156,10 +162,24 @@ export function FundForm({ fund, onSaved }: { fund?: Fund; onSaved?: (f: Fund) =
   };
 
   const remove = async () => {
-    if (!fund || !confirm(`Supprimer la caisse « ${fund.name} » ?`)) return;
+    if (!fund) return;
+    if (!canDelete) {
+      toast('Une caisse avec des postes ou des recettes ne peut pas être supprimée : archivez-la.');
+      return;
+    }
+    if (!confirm(`Supprimer la caisse « ${fund.name} » ?`)) return;
     await saveFund({ ...fund, deleted: true });
     await closeSheet();
     go('#/caisses');
+  };
+
+  const setArchived = async (archived: boolean) => {
+    if (!fund) return;
+    if (archived && !confirm(`Archiver la caisse « ${fund.name} » ?\nElle et ses postes n’apparaîtront plus dans la saisie ; tout est conservé.`)) return;
+    await saveFund({ ...fund, archived });
+    await closeSheet();
+    toast(<>Caisse <b>{fund.name}</b> {archived ? 'archivée' : 'désarchivée'}</>,
+      { label: 'Annuler', run: () => saveFund({ ...fund, archived: !archived }) });
   };
 
   return (
@@ -171,17 +191,15 @@ export function FundForm({ fund, onSaved }: { fund?: Fund; onSaved?: (f: Fund) =
             onInput={e => setName(e.currentTarget.value)} />
         </label>
         <Swatches value={color} onChange={setColor} />
-        {editing && (
-          <label class="switch">
-            <input type="checkbox" checked={archived} onChange={e => setArchived(e.currentTarget.checked)} />
-            <span>Caisse fermée (masquée de la saisie, avec ses postes)</span>
-          </label>
-        )}
-        {editing && !canDelete && <p class="muted small">Une caisse qui a des postes ou des recettes ne peut pas être supprimée : fermez-la.</p>}
         <div class="form-actions">
-          {canDelete
-            ? <button type="button" class="btn-ghost danger" onClick={remove}>Supprimer</button>
-            : <button type="button" class="btn-ghost" onClick={() => closeSheet()}>Annuler</button>}
+          {fund ? (
+            <span class="side-actions">
+              <button type="button" class="btn-text" onClick={() => setArchived(!fund.archived)}>
+                {fund.archived ? 'Désarchiver' : 'Archiver'}
+              </button>
+              <button type="button" class="btn-text danger" onClick={remove}>Supprimer</button>
+            </span>
+          ) : <button type="button" class="btn-ghost" onClick={() => closeSheet()}>Annuler</button>}
           <button class="btn-primary" disabled={!name.trim()}>{editing ? 'Enregistrer' : 'Créer'}</button>
         </div>
       </form>
@@ -227,38 +245,37 @@ export function PickItem({ title, items, current, onPick }: {
 
 // ---------------------------------------------------------------- notes import
 
-const EXAMPLE = `# Maison
-+ 3000 salaire
-## Alimentation
+const EXAMPLE = `+ 3000 salaire
+# Alimentation
 - 450 courses
 2026-10-12 - 300 boucher`;
 
-/** Lines that clash with what is already saved (a poste filed under another caisse). */
-function conflicts(caisses: ImportCaisse[]): ImportError[] {
-  const out: ImportError[] = [];
-  for (const c of caisses) {
-    const fund = findFundByName(c.name);
-    for (const p of c.postes) {
-      const other = findProjectByName(p.name);
-      if (other && other.fundId !== fund?.id) {
-        out.push({ line: p.line, text: `## ${p.name}`, message: `Le poste « ${other.name} » existe déjà dans la caisse « ${fundById(other.fundId)?.name ?? '?'} »` });
-      }
-    }
-  }
-  return out;
+const findIn = (fundId: string | null, name: string) =>
+  fundId ? projectsOf(fundId).find(q => q.name.toLocaleLowerCase('fr') === name.toLocaleLowerCase('fr')) : undefined;
+
+/** Postes of the text that already exist in another caisse. */
+function conflicts(postes: ImportPoste[], fundId: string | null): ImportError[] {
+  return postes.flatMap(p => {
+    const other = findProjectByName(p.name);
+    return other && other.fundId !== fundId
+      ? [{ line: p.line, text: `# ${p.name}`, message: `Le poste « ${other.name} » existe déjà dans la caisse « ${fundById(other.fundId)?.name ?? '?'} »` }]
+      : [];
+  });
 }
 
+/** Import into one caisse: recettes (+) and postes (#) with their dépenses (-). */
 export function ImportNotes() {
+  const [fund, setFund] = useState<FundChoice>({ fundId: defaultFundId(), newName: '' });
   const [text, setText] = useState('');
   const [date, setDate] = useState(todayISO());
   const canPaste = !!navigator.clipboard?.readText;
 
-  const parsed = parseImport(text);
-  const errors = [...parsed.errors, ...conflicts(parsed.caisses)].sort((a, b) => a.line - b.line);
-  const { caisses } = parsed;
-  const nInc = caisses.reduce((t, c) => t + c.incomes.length, 0);
-  const nExp = caisses.reduce((t, c) => t + c.postes.reduce((u, p) => u + p.expenses.length, 0), 0);
+  const { incomes, postes, errors: lineErrors } = parseImport(text);
+  const errors = [...lineErrors, ...conflicts(postes, fund.fundId)].sort((a, b) => a.line - b.line);
+  const nInc = incomes.length;
+  const nExp = postes.reduce((t, p) => t + p.expenses.length, 0);
   const label = [nExp && plural(nExp, 'dépense'), nInc && plural(nInc, 'recette')].filter(Boolean).join(' + ');
+  const canImport = !errors.length && nExp + nInc > 0 && choiceReady(fund);
 
   const paste = async () => {
     try {
@@ -270,7 +287,7 @@ export function ImportNotes() {
 
   const copyPrompt = async () => {
     try {
-      await navigator.clipboard.writeText(aiPrompt(liveFunds.value.map(f => f.name)));
+      await navigator.clipboard.writeText(aiPrompt(fund.fundId ? projectsOf(fund.fundId).map(p => p.name) : []));
       toast('Instructions copiées : collez-les dans ChatGPT avec vos notes');
     } catch {
       toast('Copie impossible sur ce téléphone');
@@ -279,25 +296,22 @@ export function ImportNotes() {
 
   const submit = async (e: Event) => {
     e.preventDefault();
-    if (errors.length || !(nExp + nInc)) return;
+    if (!canImport) return;
+    const fundId = (await resolveFund(fund))!;
     let n = 0;
     const day = (x: ImportEntry) => x.date ?? (date || todayISO());
-    for (const c of caisses) {
-      const fund = findFundByName(c.name) ?? await saveFund(newFund(c.name));
-      for (const x of c.incomes) {
-        await saveIncome(newIncome({ fundId: fund.id, amount: x.amount, note: x.note, date: day(x) }, now() + n++));
-      }
-      for (const p of c.postes) {
-        const poste = projectsOf(fund.id).find(q => q.name.toLocaleLowerCase('fr') === p.name.toLocaleLowerCase('fr'))
-          ?? await saveProject(newProject(p.name, 0, fund.id));
-        for (const x of p.expenses) {
-          await saveExpense(newExpense({ projectId: poste.id, amount: x.amount, note: x.note, date: day(x) }, now() + n++));
-        }
+    for (const x of incomes) {
+      await saveIncome(newIncome({ fundId, amount: x.amount, note: x.note, date: day(x) }, now() + n++));
+    }
+    for (const p of postes) {
+      const poste = findIn(fundId, p.name) ?? await saveProject(newProject(p.name, 0, fundId));
+      for (const x of p.expenses) {
+        await saveExpense(newExpense({ projectId: poste.id, amount: x.amount, note: x.note, date: day(x) }, now() + n++));
       }
     }
     await closeSheet();
     toast(`${label.replace(' + ', ' et ')} importée${n > 1 ? 's' : ''} ✿`);
-    go('#/caisses');
+    go(`#/caisse/${fundId}`);
   };
 
   const entry = (x: ImportEntry, sign: string) => (
@@ -311,11 +325,13 @@ export function ImportNotes() {
     <>
       <h2>Importer mes notes</h2>
       <form class="form" onSubmit={submit}>
+        <FundField value={fund} onChange={setFund} />
+
         <details class="format-help">
           <summary>Format à respecter</summary>
           <pre>{EXAMPLE}</pre>
           <p class="muted small">
-            <b>#</b> caisse · <b>##</b> poste de cette caisse · <b>+</b> recette · <b>−</b> dépense.
+            <b>+</b> recette dans la caisse · <b>#</b> poste · <b>−</b> dépense sur le poste au-dessus.
             Montants en chiffres (1500 ou 1500,50), date facultative au début.
           </p>
           <p class="muted small">Notes en désordre ? Copiez les instructions, collez-les dans ChatGPT avec vos notes, puis collez sa réponse ici.</p>
@@ -340,18 +356,14 @@ export function ImportNotes() {
           </div>
         )}
 
-        {caisses.length > 0 && (
+        {nExp + nInc > 0 && (
           <div class="preview">
-            {caisses.map(c => (
-              <div key={c.line} class="pv-caisse">
-                <p class="pv-head">{c.name}{!findFundByName(c.name) && <em>nouvelle caisse</em>}</p>
-                {c.incomes.map(x => entry(x, '+'))}
-                {c.postes.map(p => (
-                  <div key={p.line} class="pv-poste">
-                    <p class="pv-section">{p.name}{!projectsOf(findFundByName(c.name)?.id ?? '').some(q => q.name.toLocaleLowerCase('fr') === p.name.toLocaleLowerCase('fr')) && ' · nouveau'}</p>
-                    {p.expenses.map(x => entry(x, '−'))}
-                  </div>
-                ))}
+            {nInc > 0 && <p class="pv-section">Recettes</p>}
+            {incomes.map(x => entry(x, '+'))}
+            {postes.map(p => (
+              <div key={p.line} class="pv-poste">
+                <p class="pv-head">{p.name}{!findIn(fund.fundId, p.name) && <em>nouveau poste</em>}</p>
+                {p.expenses.map(x => entry(x, '−'))}
               </div>
             ))}
           </div>
@@ -359,7 +371,7 @@ export function ImportNotes() {
 
         <div class="form-actions">
           <button type="button" class="btn-ghost" onClick={() => closeSheet()}>Annuler</button>
-          <button class="btn-primary" disabled={!!errors.length || !(nExp + nInc)}>{nExp + nInc ? `Importer ${label}` : 'Importer'}</button>
+          <button class="btn-primary" disabled={!canImport}>{nExp + nInc ? `Importer ${label}` : 'Importer'}</button>
         </div>
       </form>
     </>
