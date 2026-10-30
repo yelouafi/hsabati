@@ -260,6 +260,14 @@ h2 { font-size: 18px; }
   border-radius: 14px; padding: 13px 14px; color: var(--ink); font-weight: 600; font-size: 16px; width: 100%;
 }
 .form textarea { resize: vertical; line-height: 1.5; }
+.form textarea::placeholder, .form input::placeholder { color: var(--muted); opacity: .6; font-weight: 500; }
+.paste-box { position: relative; }
+.paste-btn { position: absolute; right: 10px; bottom: 12px; }
+.example { margin: -4px 4px 0; line-height: 1.5; }
+.example b { color: var(--ink); font-weight: 800; }
+/* iOS Safari: date inputs ignore width and center their text. */
+.form input[type=date] { -webkit-appearance: none; appearance: none; min-width: 0; display: block; min-height: 48px; text-align: left; }
+.form input[type=date]::-webkit-date-and-time-value { text-align: left; }
 .form input:focus, .form textarea:focus { box-shadow: 0 0 0 2px var(--accent); }
 .form-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .form-actions .btn-primary { flex: 1; max-width: 240px; margin-left: auto; }
