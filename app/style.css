@@ -182,8 +182,8 @@ h2 { font-size: 18px; }
 .big-num small { font: 800 14px var(--sans); color: var(--muted); }
 
 .summary { display: flex; flex-direction: column; padding: 4px 4px 18px; font-size: 14px; }
-.backup-nudge { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 14px 16px; margin-bottom: 14px; text-align: left; font-size: 15px; border: 1.5px dashed color-mix(in srgb, var(--accent) 50%, transparent); }
-.backup-nudge .btn-soft { flex: none; }
+.backup-nudge { text-align: center; color: var(--muted); font-size: 14px; margin: 24px 0 0; }
+.backup-nudge .link { font-size: 14px; }
 .list { display: flex; flex-direction: column; gap: 12px; }
 .project-card { display: flex; align-items: center; gap: 14px; padding: 14px 14px 14px 12px; transition: transform .12s; }
 .project-card:active { transform: scale(.98); }

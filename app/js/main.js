@@ -484,11 +484,6 @@ function renderProjects() {
         <strong class="big-num">${money0(totalSpent)} <small>MAD</small></strong>
         ${totalBudget && budgeted.length === active.length ? `<span class="muted">sur ${money0(totalBudget)} MAD de budget</span>` : ''}
       </div>
-      ${backupDue() ? `
-        <button class="card backup-nudge" data-act="backup">
-          <span><b>Pensez à sauvegarder</b><br><span class="muted">${h(lastBackupText())}</span></span>
-          <span class="btn-soft">Sauvegarder</span>
-        </button>` : ''}
       <div class="list">${active.map(card).join('')}</div>`
     : `<div class="empty-state">
         <div class="empty-art">✿</div>
@@ -501,6 +496,8 @@ function renderProjects() {
         <summary>Projets terminés (${done.length})</summary>
         <div class="list">${done.map(card).join('')}</div>
       </details>` : ''}
+    ${backupDue() ? `
+      <p class="backup-nudge">${h(lastBackupText())} · <button class="link" data-act="backup">Sauvegarder</button></p>` : ''}
   </section>`;
 
   view.onclick = e => {
