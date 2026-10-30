@@ -26,6 +26,22 @@ test('parseExpenseLine finds label and amount', () => {
   expect(parseExpenseLine('tissu = 455,50')).toEqual({ label: 'tissu', amount: 455.5 });
 });
 
+test('a line with only an amount (and currency) has no label', () => {
+  expect(parseExpenseLine('3000 dh')).toEqual({ label: '', amount: 3000 });
+  expect(parseExpenseLine('400  dh')).toEqual({ label: '', amount: 400 });
+  expect(parseExpenseLine('1500 MAD')).toEqual({ label: '', amount: 1500 });
+  expect(parseExpenseLine('3000')).toEqual({ label: '', amount: 3000 });
+  expect(parseExpenseLine('12 500')).toEqual({ label: '', amount: 12500 });
+  expect(parseExpenseLine('1000 dh lit enfant')).toEqual({ label: 'lit enfant', amount: 1000 });
+});
+
+test('bare amounts under a project keep their full value', () => {
+  const groups = groupNotes(parseNotes('Housees\n3000\n2500 dh\n400  dh'));
+  expect(groups).toEqual([{ name: 'Housees', expenses: [
+    { label: '', amount: 3000 }, { label: '', amount: 2500 }, { label: '', amount: 400 },
+  ] }]);
+});
+
 test('parseNotes groups projects and expenses', () => {
   const text = `project 1
 

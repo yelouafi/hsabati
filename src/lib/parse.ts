@@ -80,7 +80,8 @@ export function parseExpenseLine(line: string): ParsedExpense | null {
   }
   // Amount at the start ("1500 menuisier").
   const head = clean.match(/^(\d[\d\s.,  ]*k?)\s*(?:dhs?|mad|dirhams?)?\s*[:\-–]?\s*(.+)$/i);
-  if (head) {
+  // A label needs a letter and is not just the currency ("3000", "3000 dh").
+  if (head && /\p{L}/u.test(head[2]) && !/^(dhs?|mad|dirhams?)$/i.test(head[2].trim())) {
     const amount = parseAmount(head[1]);
     if (amount != null) return { label: tidyLabel(head[2]), amount };
   }
