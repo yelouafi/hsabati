@@ -142,6 +142,11 @@ h2 { font-size: 18px; }
 .chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
 .chip:active { transform: scale(.96); }
 .chip.on { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface)); }
+.chip-more { color: var(--muted); font-weight: 800; }
+.pick-list .row { width: 100%; align-items: center; text-align: left; font-size: 16px; }
+.pick-list .row span { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.pick-list .row i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; }
+.pick-list .row.on { background: color-mix(in srgb, var(--c) 14%, var(--surface)); }
 .chip-add { color: var(--accent); font-weight: 800; min-width: 44px; justify-content: center; }
 
 .note {
