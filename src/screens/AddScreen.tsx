@@ -276,6 +276,13 @@ function Keypad({ onKey, onClear }: { onKey: (k: string) => void; onClear: () =>
     el.classList.remove('pressed');
     void el.offsetWidth;
     el.classList.add('pressed');
+    // Typing an amount while the note keyboard is open: close it, so the
+    // page scrolls back and the amount is visible again.
+    const focused = document.activeElement as HTMLElement | null;
+    if (focused?.matches('input, textarea')) {
+      focused.blur();
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    }
     onKey(key);
     if (key === 'del') hold.current = setTimeout(() => { onClear(); navigator.vibrate?.(10); }, 450);
   };
