@@ -1,5 +1,6 @@
 import { useEffect } from 'preact/hooks';
 import { settings } from './lib/store';
+import { applyTheme } from './lib/theme';
 import { closeSheet, hash, hideToast, sheetContent, sheetOpen, toastState, toastVisible } from './lib/ui';
 import { Icon } from './components/common';
 import { AddScreen } from './screens/AddScreen';
@@ -26,6 +27,7 @@ export function App() {
   const tab = path.startsWith('#/projet') ? 'projects' : path.startsWith('#/reglages') ? 'settings' : 'add';
 
   useEffect(() => { document.documentElement.dataset.accent = settings.value.accent; }, [settings.value.accent]);
+  useEffect(() => applyTheme(settings.value.theme ?? 'auto'), [settings.value.theme]);
   useEffect(() => { window.scrollTo(0, 0); }, [path]);
 
   const t = toastState.value;

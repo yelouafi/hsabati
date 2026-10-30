@@ -5,7 +5,13 @@ import {
 import { exportBackup, openSheet, shareOrDownload, toast } from '../lib/ui';
 import { plural } from '../components/common';
 import { ImportNotes } from '../components/sheets';
-import type { Backup } from '../lib/types';
+import type { Backup, Theme } from '../lib/types';
+
+const THEMES: { id: Theme; name: string }[] = [
+  { id: 'auto', name: 'Auto' },
+  { id: 'light', name: 'Clair' },
+  { id: 'dark', name: 'Sombre' },
+];
 
 export const ACCENTS = [
   { id: 'rose', name: 'Rose poudré' },
@@ -56,6 +62,20 @@ export function SettingsScreen() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div class="card block">
+        <h2>Thème</h2>
+        <div class="segmented" role="radiogroup" aria-label="Thème">
+          {THEMES.map(t => {
+            const on = (settings.value.theme ?? 'auto') === t.id;
+            return (
+              <button key={t.id} type="button" role="radio" aria-checked={on} class={on ? 'on' : ''}
+                onClick={() => saveSettings({ theme: t.id })}>{t.name}</button>
+            );
+          })}
+        </div>
+        <p class="muted small">Auto suit le réglage du téléphone.</p>
       </div>
 
       <div class="card block">

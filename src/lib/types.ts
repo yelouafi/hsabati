@@ -24,9 +24,12 @@ export type Expense = {
   deleted?: boolean;
 };
 
+export type Theme = 'auto' | 'light' | 'dark';
+
 export type Settings = {
   id: 'settings';
   accent: string;
+  theme?: Theme;
   lastProjectId: string | null;
   lastBackupAt?: number;
   backupCount?: number;

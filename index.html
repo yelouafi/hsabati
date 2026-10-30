@@ -7,6 +7,13 @@
   <meta name="description" content="Mes dépenses par projet, en deux secondes.">
   <meta name="theme-color" content="#fbf6f3" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#1d181b" media="(prefers-color-scheme: dark)">
+  <script>
+    // Apply a chosen light/dark theme before first paint (no flash while data loads).
+    try {
+      var t = localStorage.getItem('hsabati-theme');
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
