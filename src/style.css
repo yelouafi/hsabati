@@ -338,14 +338,13 @@ h2 { font-size: 18px; }
 .form input:focus, .form textarea:focus { box-shadow: 0 0 0 2px var(--accent); }
 .form-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .form-actions .btn-primary { flex: 1; max-width: 240px; margin-left: auto; }
+.manage-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
 .swatches { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 10px; }
 .swatches legend { font-size: 14px; color: var(--muted); font-weight: 700; margin-bottom: 8px; padding: 0; }
 .form .swatches label { display: block; }
 .swatches input { position: absolute; opacity: 0; }
 .swatches i { display: block; width: 32px; height: 32px; border-radius: 50%; background: var(--c); transition: transform .15s; }
 .swatches input:checked + i { transform: scale(1.1); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--c); }
-.form .switch { flex-direction: row; align-items: center; gap: 10px; color: var(--ink); }
-.switch input { width: 20px; height: 20px; accent-color: var(--accent); }
 
 .preview { display: flex; flex-direction: column; gap: 4px; }
 .pv { display: flex; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 12px; background: var(--surface); text-align: left; font-size: 15px; }

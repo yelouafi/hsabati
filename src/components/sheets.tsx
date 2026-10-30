@@ -73,7 +73,6 @@ export function ProjectForm({ project, fundId, onSaved }: { project?: Project; f
   const [fund, setFund] = useState<FundChoice>({ fundId: project?.fundId ?? fundId ?? defaultFundId(), newName: '' });
   const [budget, setBudget] = useState(project?.budget ? money(project.budget) : '');
   const [color, setColor] = useState(project?.color ?? PROJECT_COLORS[liveProjects.value.length % PROJECT_COLORS.length]);
-  const [archived, setArchived] = useState(project?.archived ?? false);
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -84,7 +83,7 @@ export function ProjectForm({ project, fundId, onSaved }: { project?: Project; f
     e.preventDefault();
     if (!name.trim() || !choiceReady(fund)) return;
     const fundId = (await resolveFund(fund))!;
-    const fields = { name: name.trim(), fundId, budget: parseAmount(budget) || 0, color, archived };
+    const fields = { name: name.trim(), fundId, budget: parseAmount(budget) || 0, color };
     const saved = await saveProject(project ? { ...project, ...fields } : { ...newProject(fields.name, fields.budget, fundId), ...fields });
     await closeSheet();
     onSaved?.(saved);
@@ -101,6 +100,15 @@ export function ProjectForm({ project, fundId, onSaved }: { project?: Project; f
     go(`#/caisse/${project.fundId}`);
   };
 
+  const setArchived = async (archived: boolean) => {
+    if (!project) return;
+    if (archived && !confirm(`Archiver le poste « ${project.name} » ?\nIl n’apparaîtra plus dans la saisie ; ses dépenses sont conservées.`)) return;
+    await saveProject({ ...project, archived });
+    await closeSheet();
+    toast(<>Poste <b>{project.name}</b> {archived ? 'archivé' : 'désarchivé'}</>,
+      { label: 'Annuler', run: () => saveProject({ ...project, archived: !archived }) });
+  };
+
   return (
     <>
       <h2>{editing ? 'Modifier le poste' : 'Nouveau poste'}</h2>
@@ -114,19 +122,19 @@ export function ProjectForm({ project, fundId, onSaved }: { project?: Project; f
           <input inputMode="decimal" placeholder="ex. 20 000" value={budget} onInput={e => setBudget(e.currentTarget.value)} />
         </label>
         <Swatches value={color} onChange={setColor} />
-        {editing && (
-          <label class="switch">
-            <input type="checkbox" checked={archived} onChange={e => setArchived(e.currentTarget.checked)} />
-            <span>Poste terminé (masqué de la saisie)</span>
-          </label>
-        )}
         <div class="form-actions">
-          {editing
-            ? <button type="button" class="btn-ghost danger" onClick={remove}>Supprimer</button>
-            : <button type="button" class="btn-ghost" onClick={() => closeSheet()}>Annuler</button>}
+          <button type="button" class="btn-ghost" onClick={() => closeSheet()}>Annuler</button>
           <button class="btn-primary" disabled={!name.trim() || !choiceReady(fund)}>{editing ? 'Enregistrer' : 'Créer'}</button>
         </div>
       </form>
+      {project && (
+        <div class="manage-actions">
+          <button type="button" class="btn-soft" onClick={() => setArchived(!project.archived)}>
+            {project.archived ? 'Désarchiver' : 'Archiver'}
+          </button>
+          <button type="button" class="btn-ghost danger" onClick={remove}>Supprimer</button>
+        </div>
+      )}
     </>
   );
 }
@@ -137,7 +145,6 @@ export function FundForm({ fund, onSaved }: { fund?: Fund; onSaved?: (f: Fund) =
   const editing = !!fund;
   const [name, setName] = useState(fund?.name ?? '');
   const [color, setColor] = useState(fund?.color ?? PROJECT_COLORS[(liveFunds.value.length + 3) % PROJECT_COLORS.length]);
-  const [archived, setArchived] = useState(fund?.archived ?? false);
   const nameRef = useRef<HTMLInputElement>(null);
   const canDelete = !!fund && fundIsEmpty(fund);
 
@@ -148,7 +155,7 @@ export function FundForm({ fund, onSaved }: { fund?: Fund; onSaved?: (f: Fund) =
   const submit = async (e: Event) => {
     e.preventDefault();
     if (!name.trim()) return;
-    const fields = { name: name.trim(), color, archived };
+    const fields = { name: name.trim(), color };
     const saved = await saveFund(fund ? { ...fund, ...fields } : { ...newFund(fields.name), ...fields });
     await closeSheet();
     onSaved?.(saved);
@@ -162,6 +169,15 @@ export function FundForm({ fund, onSaved }: { fund?: Fund; onSaved?: (f: Fund) =
     go('#/caisses');
   };
 
+  const setArchived = async (archived: boolean) => {
+    if (!fund) return;
+    if (archived && !confirm(`Archiver la caisse « ${fund.name} » ?\nElle et ses postes n’apparaîtront plus dans la saisie ; tout est conservé.`)) return;
+    await saveFund({ ...fund, archived });
+    await closeSheet();
+    toast(<>Caisse <b>{fund.name}</b> {archived ? 'archivée' : 'désarchivée'}</>,
+      { label: 'Annuler', run: () => saveFund({ ...fund, archived: !archived }) });
+  };
+
   return (
     <>
       <h2>{editing ? 'Modifier la caisse' : 'Nouvelle caisse'}</h2>
@@ -171,20 +187,22 @@ export function FundForm({ fund, onSaved }: { fund?: Fund; onSaved?: (f: Fund) =
             onInput={e => setName(e.currentTarget.value)} />
         </label>
         <Swatches value={color} onChange={setColor} />
-        {editing && (
-          <label class="switch">
-            <input type="checkbox" checked={archived} onChange={e => setArchived(e.currentTarget.checked)} />
-            <span>Caisse fermée (masquée de la saisie, avec ses postes)</span>
-          </label>
-        )}
-        {editing && !canDelete && <p class="muted small">Une caisse qui a des postes ou des recettes ne peut pas être supprimée : fermez-la.</p>}
         <div class="form-actions">
-          {canDelete
-            ? <button type="button" class="btn-ghost danger" onClick={remove}>Supprimer</button>
-            : <button type="button" class="btn-ghost" onClick={() => closeSheet()}>Annuler</button>}
+          <button type="button" class="btn-ghost" onClick={() => closeSheet()}>Annuler</button>
           <button class="btn-primary" disabled={!name.trim()}>{editing ? 'Enregistrer' : 'Créer'}</button>
         </div>
       </form>
+      {fund && (
+        <>
+          <div class="manage-actions">
+            <button type="button" class="btn-soft" onClick={() => setArchived(!fund.archived)}>
+              {fund.archived ? 'Désarchiver' : 'Archiver'}
+            </button>
+            {canDelete && <button type="button" class="btn-ghost danger" onClick={remove}>Supprimer</button>}
+          </div>
+          {!canDelete && <p class="muted small center">Une caisse qui a des postes ou des recettes ne peut pas être supprimée : archivez-la.</p>}
+        </>
+      )}
     </>
   );
 }

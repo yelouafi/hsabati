@@ -83,7 +83,7 @@ export function FundsScreen() {
 
       {closed.length > 0 && (
         <details class="archived">
-          <summary>Caisses fermées ({closed.length})</summary>
+          <summary>Caisses archivées ({closed.length})</summary>
           <div class="list">{closed.map(f => <FundCard key={f.id} fund={f} />)}</div>
         </details>
       )}
@@ -169,7 +169,7 @@ export function FundScreen({ id }: { id: string }) {
         : <p class="muted center pad">Pas encore de poste dans cette caisse.</p>}
       {done.length > 0 && (
         <details class="archived">
-          <summary>Postes terminés ({done.length})</summary>
+          <summary>Postes archivés ({done.length})</summary>
           <div class="list">{done.map(p => <ProjectCard key={p.id} project={p} />)}</div>
         </details>
       )}
