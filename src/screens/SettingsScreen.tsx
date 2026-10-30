@@ -89,7 +89,7 @@ export function SettingsScreen() {
 
       <div class="card block">
         <h2>Importer mes notes</h2>
-        <p class="muted">Collez vos notes du téléphone : postes, recettes et montants sont reconnus automatiquement.</p>
+        <p class="muted">Collez un texte au format caisses / postes / montants. Notes en désordre ? Faites-les d’abord mettre au propre par une IA (instructions fournies).</p>
         <button class="btn-soft" onClick={() => openSheet(<ImportNotes />)}>Coller mes notes</button>
       </div>
 
