@@ -11,10 +11,21 @@ et garde les données sur le téléphone.
 - **Saisie express** : l'app s'ouvre sur le pavé numérique, en mode
   **Dépense** (dernier poste déjà choisi) ; un bouton **Recette** pour l'argent
   reçu.
-- **Importer mes notes** : collez vos notes ; les titres deviennent des postes
-  (« Dépenses Tulip » → Tulip), une ligne « Recettes » fait passer les montants
-  suivants en recettes, et les montants sont reconnus (`1500`, `1 200,50 dh`,
-  `300+150`, `1,5k`…).
+- **Importer mes notes** : un format simple et sans ambiguïté (les notes en
+  désordre se remettent d'abord au propre avec une IA : bouton « Copier les
+  instructions pour l'IA ») :
+
+  ```
+  # Maison                    ← caisse
+  + 3000 salaire              ← recette
+  ## Alimentation             ← poste de la caisse au-dessus
+  - 450 courses               ← dépense
+  2026-10-12 - 300 boucher    ← date facultative
+  // commentaire              ← ignoré
+  ```
+
+  Montants en chiffres (`1500` ou `1500,50`). Toute autre ligne est signalée
+  avec son numéro et rien n'est importé tant qu'elle n'est pas corrigée.
 - **Sauvegarde** : un fichier à envoyer sur Google Drive / WhatsApp, export CSV
   pour Excel, restauration.
 

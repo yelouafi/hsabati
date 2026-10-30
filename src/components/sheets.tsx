@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { parseAmount, parseExpenseLine, parseNotes, planNotes, headerName, type NoteGroup, type NoteLine } from '../lib/parse';
+import { parseAmount } from '../lib/parse';
+import { aiPrompt, parseImport, type ImportCaisse, type ImportEntry, type ImportError } from '../lib/importFormat';
 import { money, money0, todayISO } from '../lib/format';
 import {
   PROJECT_COLORS, activeFunds, budgetStatus, expensesOf, findFundByName, findProjectByName, fundById, fundIsEmpty,
@@ -28,11 +29,8 @@ const defaultFundId = () => {
   return (open.find(f => f.id === settings.value.lastFundId) ?? open[0])?.id ?? null;
 };
 
-/**
- * Caisse of a poste: an existing caisse, or a new one typed by name
- * (`reuse`: a new caisse already typed for another poste in the import).
- */
-type FundChoice = { fundId: string | null; newName: string; reuse?: boolean };
+/** Caisse of a poste: an existing caisse, or a new one typed by name. */
+type FundChoice = { fundId: string | null; newName: string };
 
 async function resolveFund(choice: FundChoice): Promise<string | null> {
   if (choice.fundId) return choice.fundId;
@@ -229,176 +227,141 @@ export function PickItem({ title, items, current, onPick }: {
 
 // ---------------------------------------------------------------- notes import
 
-const groupKey = (g: NoteGroup) => g.name.toLocaleLowerCase('fr');
-const hasEntries = (g: NoteGroup) => g.expenses.length + g.incomes.length > 0;
-const DIVERS = 'Divers';
+const EXAMPLE = `# Maison
++ 3000 salaire
+## Alimentation
+- 450 courses
+2026-10-12 - 300 boucher`;
 
-/** Caisse used by a group: the caisse it names, its poste's caisse, or the one chosen. */
-function groupFund(g: NoteGroup, choice: FundChoice | undefined): FundChoice | 'known' {
-  if (g.kind === 'fund') return 'known';
-  const p = findProjectByName(g.name);
-  if (p) return 'known';
-  return choice ?? { fundId: defaultFundId(), newName: '' };
-}
-
-function ImportFundSelect({ value, pending, onChange }: {
-  value: FundChoice; pending: string[]; onChange: (c: FundChoice) => void;
-}) {
-  const funds = activeFunds.value;
-  const selected = value.fundId ?? (value.reuse ? `new:${value.newName}` : '__new');
-  return (
-    <div class="pv-fund">
-      <select value={selected} aria-label="Caisse"
-        onChange={e => {
-          const v = e.currentTarget.value;
-          if (v === '__new') onChange({ fundId: null, newName: '' });
-          else if (v.startsWith('new:')) onChange({ fundId: null, newName: v.slice(4), reuse: true });
-          else onChange({ fundId: v, newName: '' });
-        }}>
-        {funds.map(f => <option key={f.id} value={f.id}>Caisse : {f.name}</option>)}
-        {pending.map(n => <option key={n} value={`new:${n}`}>Caisse : {n} (nouvelle)</option>)}
-        <option value="__new">＋ Nouvelle caisse…</option>
-      </select>
-      {!value.fundId && !value.reuse && (
-        <input placeholder="Nom de la caisse" value={value.newName} maxLength={40}
-          onInput={e => onChange({ fundId: null, newName: e.currentTarget.value })} />
-      )}
-    </div>
-  );
+/** Lines that clash with what is already saved (a poste filed under another caisse). */
+function conflicts(caisses: ImportCaisse[]): ImportError[] {
+  const out: ImportError[] = [];
+  for (const c of caisses) {
+    const fund = findFundByName(c.name);
+    for (const p of c.postes) {
+      const other = findProjectByName(p.name);
+      if (other && other.fundId !== fund?.id) {
+        out.push({ line: p.line, text: `## ${p.name}`, message: `Le poste « ${other.name} » existe déjà dans la caisse « ${fundById(other.fundId)?.name ?? '?'} »` });
+      }
+    }
+  }
+  return out;
 }
 
 export function ImportNotes() {
   const [text, setText] = useState('');
-  const [lines, setLines] = useState<NoteLine[]>([]);
   const [date, setDate] = useState(todayISO());
-  const [choices, setChoices] = useState<Record<string, FundChoice>>({});
   const canPaste = !!navigator.clipboard?.readText;
 
-  const { groups, roles } = planNotes(lines, name => !!findFundByName(name));
-  const used = groups.filter(hasEntries);
-  const nExp = used.reduce((t, g) => t + g.expenses.length, 0);
-  const nInc = used.reduce((t, g) => t + g.incomes.length, 0);
-  // New caisses typed for one poste are offered to the others.
-  const pending = [...new Set(Object.values(choices).filter(c => !c.fundId && !c.reuse && c.newName.trim()).map(c => c.newName.trim()))];
-  const ready = used.every(g => { const c = groupFund(g, choices[groupKey(g)]); return c === 'known' || choiceReady(c); });
-
-  const update = (value: string) => {
-    setText(value);
-    setLines(parseNotes(value));
-  };
+  const parsed = parseImport(text);
+  const errors = [...parsed.errors, ...conflicts(parsed.caisses)].sort((a, b) => a.line - b.line);
+  const { caisses } = parsed;
+  const nInc = caisses.reduce((t, c) => t + c.incomes.length, 0);
+  const nExp = caisses.reduce((t, c) => t + c.postes.reduce((u, p) => u + p.expenses.length, 0), 0);
+  const label = [nExp && plural(nExp, 'dépense'), nInc && plural(nInc, 'recette')].filter(Boolean).join(' + ');
 
   const paste = async () => {
     try {
-      update(await navigator.clipboard.readText());
+      setText(await navigator.clipboard.readText());
     } catch {
       toast('Appuyez longuement dans la zone puis « Coller »');
     }
   };
 
-  // Tapping a line flips it between title (caisse / poste) and amount.
-  const flip = (i: number) => {
-    const l = lines[i];
-    let next: NoteLine | null = null;
-    if (l.type === 'amount') next = { type: 'header', raw: l.raw, name: headerName(l.raw) };
-    else {
-      const exp = parseExpenseLine(l.raw);
-      if (exp) next = { type: 'amount', raw: l.raw, ...exp };
+  const copyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(aiPrompt(liveFunds.value.map(f => f.name)));
+      toast('Instructions copiées : collez-les dans ChatGPT avec vos notes');
+    } catch {
+      toast('Copie impossible sur ce téléphone');
     }
-    if (next) setLines(lines.map((x, j) => (j === i ? next : x)));
   };
 
   const submit = async (e: Event) => {
     e.preventDefault();
-    if (!ready) return;
+    if (errors.length || !(nExp + nInc)) return;
     let n = 0;
-    const day = date || todayISO();
-    for (const g of used) {
-      let fundId: string;
-      let projectId: string | null = null;
-      if (g.kind === 'fund') {
-        fundId = findFundByName(g.name)!.id;
-        if (g.expenses.length) {
-          // Amounts directly under a caisse go to its « Divers » poste.
-          const divers = projectsOf(fundId).find(p => p.name === DIVERS) ?? await saveProject(newProject(DIVERS, 0, fundId));
-          projectId = divers.id;
+    const day = (x: ImportEntry) => x.date ?? (date || todayISO());
+    for (const c of caisses) {
+      const fund = findFundByName(c.name) ?? await saveFund(newFund(c.name));
+      for (const x of c.incomes) {
+        await saveIncome(newIncome({ fundId: fund.id, amount: x.amount, note: x.note, date: day(x) }, now() + n++));
+      }
+      for (const p of c.postes) {
+        const poste = projectsOf(fund.id).find(q => q.name.toLocaleLowerCase('fr') === p.name.toLocaleLowerCase('fr'))
+          ?? await saveProject(newProject(p.name, 0, fund.id));
+        for (const x of p.expenses) {
+          await saveExpense(newExpense({ projectId: poste.id, amount: x.amount, note: x.note, date: day(x) }, now() + n++));
         }
-      } else {
-        const existing = findProjectByName(g.name);
-        fundId = existing?.fundId ?? (await resolveFund(choices[groupKey(g)] ?? { fundId: defaultFundId(), newName: '' }))!;
-        if (g.expenses.length) projectId = (existing ?? await saveProject(newProject(g.name, 0, fundId))).id;
-      }
-      for (const x of g.incomes) {
-        await saveIncome(newIncome({ fundId, amount: x.amount, note: x.label, date: day }, now() + n++));
-      }
-      for (const x of g.expenses) {
-        await saveExpense(newExpense({ projectId: projectId!, amount: x.amount, note: x.label, date: day }, now() + n++));
       }
     }
     await closeSheet();
-    const parts = [nExp && `${plural(nExp, 'dépense')}`, nInc && `${plural(nInc, 'recette')}`].filter(Boolean).join(' et ');
-    toast(`${parts} importée${n > 1 ? 's' : ''} ✿`);
+    toast(`${label.replace(' + ', ' et ')} importée${n > 1 ? 's' : ''} ✿`);
     go('#/caisses');
   };
 
-  const headerBadge = (g: NoteGroup) => {
-    if (g.kind === 'fund') return <em>caisse</em>;
-    if (findProjectByName(g.name)) return null;
-    return <em>{g.expenses.length ? 'nouveau poste' : 'recettes'}</em>;
-  };
-
-  const label = [nExp && plural(nExp, 'dépense'), nInc && plural(nInc, 'recette')].filter(Boolean).join(' + ');
+  const entry = (x: ImportEntry, sign: string) => (
+    <div key={x.line} class={`pv ${sign === '+' ? 'pv-income' : ''}`}>
+      <span>{x.note || <i class="muted">sans note</i>}{x.date && <small class="muted"> · {x.date}</small>}</span>
+      <b>{sign}{money(x.amount)}</b>
+    </div>
+  );
 
   return (
     <>
       <h2>Importer mes notes</h2>
       <form class="form" onSubmit={submit}>
+        <details class="format-help">
+          <summary>Format à respecter</summary>
+          <pre>{EXAMPLE}</pre>
+          <p class="muted small">
+            <b>#</b> caisse · <b>##</b> poste de cette caisse · <b>+</b> recette · <b>−</b> dépense.
+            Montants en chiffres (1500 ou 1500,50), date facultative au début.
+          </p>
+          <p class="muted small">Notes en désordre ? Copiez les instructions, collez-les dans ChatGPT avec vos notes, puis collez sa réponse ici.</p>
+          <button type="button" class="btn-soft" onClick={copyPrompt}>Copier les instructions pour l’IA</button>
+        </details>
+
         <div class="paste-box">
-          <textarea rows={6} placeholder="Collez vos notes ici…" value={text} onInput={e => update(e.currentTarget.value)} />
+          <textarea rows={7} placeholder="Collez le texte ici…" value={text} spellcheck={false}
+            onInput={e => setText(e.currentTarget.value)} />
           {canPaste && !text && <button type="button" class="btn-soft paste-btn" onClick={paste}>Coller</button>}
         </div>
-        {!text && (
-          <p class="muted small example">
-            Par exemple :<br /><b>Alimentation</b><br />courses: 450<br />boucher 300 dh<br /><br />
-            <b>Maison</b><br />Recettes<br />3000
-          </p>
-        )}
-        <label>Date de ces opérations
+        <label>Date des lignes sans date
           <input type="date" value={date} max={todayISO()} onChange={e => setDate(e.currentTarget.value)} />
         </label>
-        {lines.length > 0 && (
-          <div class="preview">
-            <p class="muted small">Touchez une ligne si elle est mal reconnue.</p>
-            {lines.map((l, i) => {
-              const { role, group } = roles[i];
-              const g = groups[group];
-              if (role === 'header' && g) {
-                const c = groupFund(g, choices[groupKey(g)]);
-                return (
-                  <div key={i}>
-                    <button type="button" class="pv pv-head" onClick={() => flip(i)}>{g.name}{headerBadge(g)}</button>
-                    {c !== 'known' && hasEntries(g) && (
-                      <ImportFundSelect value={c} pending={pending.filter(n => n !== c.newName.trim() || c.reuse)} onChange={v => setChoices({ ...choices, [groupKey(g)]: v })} />
-                    )}
-                  </div>
-                );
-              }
-              if (role === 'section') return <p key={i} class="pv-section">{l.raw.replace(/[:\s]+$/, '')}</p>;
-              if (l.type !== 'amount') return null;
-              return (
-                <button key={i} type="button" class={`pv ${role === 'income' ? 'pv-income' : ''}`} onClick={() => flip(i)}>
-                  <span>{l.label || <i class="muted">sans note</i>}</span>
-                  <b>{role === 'income' ? '+' : ''}{money(l.amount)}</b>
-                </button>
-              );
-            })}
+
+        {errors.length > 0 && (
+          <div class="import-errors" role="alert">
+            <b>{plural(errors.length, 'ligne')} à corriger</b>
+            {errors.map(x => (
+              <p key={`${x.line}-${x.message}`}><span>Ligne {x.line}</span> {x.message}{x.text && <code>{x.text}</code>}</p>
+            ))}
           </div>
         )}
+
+        {caisses.length > 0 && (
+          <div class="preview">
+            {caisses.map(c => (
+              <div key={c.line} class="pv-caisse">
+                <p class="pv-head">{c.name}{!findFundByName(c.name) && <em>nouvelle caisse</em>}</p>
+                {c.incomes.map(x => entry(x, '+'))}
+                {c.postes.map(p => (
+                  <div key={p.line} class="pv-poste">
+                    <p class="pv-section">{p.name}{!projectsOf(findFundByName(c.name)?.id ?? '').some(q => q.name.toLocaleLowerCase('fr') === p.name.toLocaleLowerCase('fr')) && ' · nouveau'}</p>
+                    {p.expenses.map(x => entry(x, '−'))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div class="form-actions">
           <button type="button" class="btn-ghost" onClick={() => closeSheet()}>Annuler</button>
-          <button class="btn-primary" disabled={!(nExp + nInc) || !ready}>{nExp + nInc ? `Importer ${label}` : 'Importer'}</button>
+          <button class="btn-primary" disabled={!!errors.length || !(nExp + nInc)}>{nExp + nInc ? `Importer ${label}` : 'Importer'}</button>
         </div>
       </form>
     </>
   );
 }
-

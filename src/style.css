@@ -356,6 +356,20 @@ h2 { font-size: 18px; }
 .pv-head { background: transparent; font: 600 17px var(--serif); padding: 12px 4px 4px; }
 .pv-head em { font: 800 11px var(--sans); font-style: normal; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: 2px; }
 .pv-income b { color: var(--income); }
+.pv small { font-weight: 600; }
+.pv-caisse { display: flex; flex-direction: column; gap: 4px; }
+.pv-poste { display: flex; flex-direction: column; gap: 4px; margin-left: 10px; }
+.format-help { background: var(--surface); box-shadow: var(--shadow); border-radius: 16px; padding: 12px 14px; }
+.format-help summary { font-weight: 800; cursor: pointer; color: color-mix(in srgb, var(--accent) 80%, var(--ink)); }
+.format-help pre { margin: 10px 0 6px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font: 600 14px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; }
+.format-help p { margin: 6px 0; }
+.format-help .btn-soft { margin-top: 4px; }
+.form textarea { font-family: ui-monospace, Menlo, monospace; font-size: 15px; }
+.import-errors { border-radius: 14px; padding: 12px 14px; background: color-mix(in srgb, var(--danger) 12%, var(--surface)); color: var(--ink); font-size: 14px; }
+.import-errors b { color: var(--danger); }
+.import-errors p { margin: 6px 0 0; }
+.import-errors span { font-weight: 800; }
+.import-errors code { display: block; margin-top: 2px; color: var(--muted); font: 600 13px ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
 .pv-section { margin: 6px 4px 0; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .pv-fund { display: flex; flex-direction: column; gap: 6px; margin: 2px 0 6px; }
 .pv-fund select { border: 0; outline: 0; background: var(--accent-soft); color: var(--ink); border-radius: 12px; padding: 10px 12px; font-weight: 700; font-size: 15px; }
