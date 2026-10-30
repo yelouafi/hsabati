@@ -65,13 +65,12 @@ export type Settings = {
   backupCount?: number;
 };
 
-/** Version 1 had no funds/incomes and projects without fundId. */
 export type Backup = {
   app: 'hsabati';
-  version: 1 | 2;
+  version: 2;
   exportedAt: string;
-  funds?: Fund[];
+  funds: Fund[];
   projects: Project[];
   expenses: Expense[];
-  incomes?: Income[];
+  incomes: Income[];
 };

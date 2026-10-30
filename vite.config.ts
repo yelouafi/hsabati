@@ -15,7 +15,7 @@ export default defineConfig({
       manifest: {
         name: 'Hsabati — mes dépenses',
         short_name: 'Hsabati',
-        description: 'Mes dépenses par projet, en deux secondes.',
+        description: 'Mes caisses et mes dépenses, en deux secondes.',
         lang: 'fr',
         start_url: './#/',
         scope: './',

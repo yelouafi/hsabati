@@ -84,8 +84,6 @@ export const fundIsEmpty = (f: Fund) => !projectsOf(f.id).length && !incomesOf(f
 
 // ---------------------------------------------------------------- actions
 
-const DEFAULT_FUND_NAME = 'Général';
-
 export async function load(): Promise<void> {
   const [fs, ps, es, is, meta] = await Promise.all([
     db.getAll<Fund>('funds'), db.getAll<Project>('projects'), db.getAll<Expense>('expenses'),
@@ -97,19 +95,6 @@ export async function load(): Promise<void> {
   incomes.value = is;
   const saved = meta.find(m => m.id === 'settings');
   if (saved) settings.value = { ...settings.value, ...saved };
-  await adoptOrphanProjects();
-}
-
-/**
- * Postes from before caisses existed (or from a v1 backup) have no caisse:
- * put them in a « Général » caisse, which she can then reorganise.
- */
-async function adoptOrphanProjects(): Promise<void> {
-  const known = new Set(funds.value.map(f => f.id));
-  const orphans = projects.value.filter(p => !p.fundId || !known.has(p.fundId));
-  if (!orphans.length) return;
-  const fund = liveFunds.value.find(f => f.name === DEFAULT_FUND_NAME) ?? await saveFund(newFund(DEFAULT_FUND_NAME));
-  for (const p of orphans) await saveProject({ ...p, fundId: fund.id });
 }
 
 function upsert<T extends { id: string }>(list: T[], rec: T): T[] {
@@ -195,8 +180,16 @@ export async function mergeIn(data: Backup): Promise<number> {
   projects.value = await merge('projects', projects.value, data.projects);
   expenses.value = await merge('expenses', expenses.value, data.expenses);
   incomes.value = await merge('incomes', incomes.value, data.incomes);
-  await adoptOrphanProjects();
   return changed;
+}
+
+/** Wipe everything on this phone (useful while testing). */
+export async function eraseAll(): Promise<void> {
+  await db.clearAll();
+  funds.value = [];
+  projects.value = [];
+  expenses.value = [];
+  incomes.value = [];
 }
 
 export function backupData(): Backup {

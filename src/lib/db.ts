@@ -8,7 +8,6 @@ let dbp: Promise<IDBDatabase> | undefined;
 function open(): Promise<IDBDatabase> {
   dbp ??= new Promise((resolve, reject) => {
     const req = indexedDB.open('hsabati', 2);
-    // v2 adds funds and incomes; existing stores are kept as they are.
     req.onupgradeneeded = () => {
       for (const s of STORES) {
         if (!req.result.objectStoreNames.contains(s)) req.result.createObjectStore(s, { keyPath: 'id' });
@@ -32,6 +31,7 @@ async function tx<T>(store: StoreName, mode: IDBTransactionMode, fn: (s: IDBObje
 
 export const getAll = <T>(store: StoreName) => tx<T[]>(store, 'readonly', s => s.getAll());
 export const put = (store: StoreName, rec: object) => tx(store, 'readwrite', s => { s.put(rec); });
+export const clearAll = () => Promise.all(STORES.map(s => tx(s, 'readwrite', st => { st.clear(); })));
 export const putMany = (store: StoreName, recs: object[]) => tx(store, 'readwrite', s => { recs.forEach(r => s.put(r)); });
 
 export function uid(): string {

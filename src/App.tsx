@@ -10,10 +10,9 @@ import { SettingsScreen } from './screens/SettingsScreen';
 function Screen({ path }: { path: string }) {
   let m: RegExpMatchArray | null;
   if ((m = path.match(/^#\/modifier\/(.+)$/))) return <AddScreen key={m[1]} editId={m[1]} />;
-  // (#/projets and #/projet/… are the older addresses, kept for shortcuts.)
-  if (path === '#/caisses' || path === '#/projets') return <FundsScreen />;
+  if (path === '#/caisses') return <FundsScreen />;
   if ((m = path.match(/^#\/caisse\/(.+)$/))) return <FundScreen id={m[1]} />;
-  if ((m = path.match(/^#\/(?:poste|projet)\/(.+)$/))) return <ProjectScreen id={m[1]} />;
+  if ((m = path.match(/^#\/poste\/(.+)$/))) return <ProjectScreen id={m[1]} />;
   if (path === '#/reglages') return <SettingsScreen />;
   return <AddScreen />;
 }
@@ -26,7 +25,7 @@ const TABS = [
 
 export function App() {
   const path = hash.value;
-  const tab = /^#\/(caisse|poste|projet)/.test(path) ? 'funds' : path.startsWith('#/reglages') ? 'settings' : 'add';
+  const tab = /^#\/(caisse|poste)/.test(path) ? 'funds' : path.startsWith('#/reglages') ? 'settings' : 'add';
 
   useEffect(() => { document.documentElement.dataset.accent = settings.value.accent; }, [settings.value.accent]);
   useEffect(() => applyTheme(settings.value.theme ?? 'auto'), [settings.value.theme]);

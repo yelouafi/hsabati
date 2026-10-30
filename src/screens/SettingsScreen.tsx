@@ -1,6 +1,6 @@
 import { todayISO } from '../lib/format';
 import {
-  fundById, lastBackupText, liveExpenses, liveIncomes, mergeIn, projectById, saveSettings, settings,
+  eraseAll, fundById, lastBackupText, liveExpenses, liveIncomes, mergeIn, projectById, saveSettings, settings,
 } from '../lib/store';
 import { exportBackup, openSheet, shareOrDownload, toast } from '../lib/ui';
 import { plural } from '../components/common';
@@ -46,12 +46,18 @@ async function restore(e: Event) {
   if (!file) return;
   try {
     const data = JSON.parse(await file.text()) as Backup;
-    if (data.app !== 'hsabati') throw new Error('not a backup');
+    if (data.app !== 'hsabati' || data.version !== 2) throw new Error('not a backup');
     const n = await mergeIn(data);
     toast(n ? `Sauvegarde restaurée (${n} éléments)` : 'Déjà à jour');
   } catch {
     toast("Ce fichier n'est pas une sauvegarde Hsabati");
   }
+}
+
+async function erase() {
+  if (!confirm('Effacer toutes les caisses, postes, dépenses et recettes de ce téléphone ?')) return;
+  await eraseAll();
+  toast('Toutes les données sont effacées');
 }
 
 export function SettingsScreen() {
@@ -106,6 +112,8 @@ export function SettingsScreen() {
           <label class="btn-ghost">Restaurer<input type="file" accept="application/json,.json" hidden onChange={restore} /></label>
         </div>
       </div>
+
+      <p class="center"><button class="link danger" onClick={erase}>Effacer toutes les données</button></p>
 
       <p class="muted center small">Hsabati · vos données restent sur ce téléphone</p>
     </section>
