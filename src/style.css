@@ -167,9 +167,10 @@ h2 { font-size: 18px; }
   height: clamp(44px, 6.6dvh, 60px); border-radius: 18px;
   background: var(--surface); box-shadow: var(--shadow);
   font: 600 26px var(--serif); display: grid; place-items: center;
-  user-select: none; transition: transform .08s, background .12s;
+  user-select: none;
 }
-.keypad button.pressed { transform: scale(.94); background: var(--accent-soft); }
+.keypad button.pressed { animation: keypress .18s ease-out; }
+@keyframes keypress { from { transform: scale(.94); background: var(--accent-soft); } }
 .keypad button[data-key=","], .keypad button[data-key="del"] { background: transparent; box-shadow: none; color: var(--muted); }
 .keypad svg { width: 26px; height: 26px; stroke-width: 1.8; }
 
@@ -309,6 +310,7 @@ h2 { font-size: 18px; }
   opacity: 0; transform: translateY(-16px); transition: opacity .2s, transform .25s cubic-bezier(.2, .8, .2, 1);
 }
 .toast.show { opacity: 1; transform: none; }
+.toast:not(.show) { pointer-events: none; }
 .toast button { color: var(--accent-soft); font-weight: 800; flex: none; padding: 4px; }
 
 .burst { position: fixed; pointer-events: none; z-index: 40; width: 0; height: 0; }

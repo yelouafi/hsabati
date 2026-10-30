@@ -21,20 +21,28 @@ et garde les données sur le téléphone.
 
 ## Développement
 
-Aucune dépendance ni étape de build : c'est du HTML/CSS/JS dans `app/`.
+Vite 7 + Preact + TypeScript, état partagé avec `@preact/signals`, mode hors
+ligne généré par `vite-plugin-pwa` (Workbox).
 
 ```sh
-npm test                                  # tests du parseur de montants
-cd app && python3 -m http.server 8000    # puis http://localhost:8000
+npm install
+npm run dev        # http://localhost:5173
+npm test           # tests du parseur de montants (Vitest)
+npm run build      # vérification TypeScript + build dans dist/
+npm run preview    # sert dist/ (avec le service worker)
 ```
 
-Le service worker ne s'active qu'en HTTPS ; en local l'app marche sans
-mode hors ligne.
+Organisation :
+
+- `src/lib/` : données (`store.ts`, IndexedDB dans `db.ts`), parseur de notes,
+  navigation / feuilles / toast (`ui.ts`), service worker (`sw.ts`)
+- `src/screens/` : Ajouter, Projets (liste et détail), Réglages
+- `src/components/` : icônes, anneau de budget, feuilles (projet, choix, import)
 
 ## Déploiement (GitHub Pages)
 
 Une fois : dans *Settings → Pages* du dépôt, choisir **Source : GitHub Actions**.
-Ensuite chaque push sur `main` publie `app/` sur
+Ensuite chaque push sur `main` lance les tests, le build, et publie `dist/` sur
 `https://<utilisateur>.github.io/hsabati/`.
 
 Les téléphones récupèrent la nouvelle version en arrière-plan et l'affichent au

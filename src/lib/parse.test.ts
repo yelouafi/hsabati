@@ -1,6 +1,5 @@
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import { parseAmount, parseExpenseLine, parseNotes, groupNotes } from '../app/js/parse.js';
+import { test, expect } from 'vitest';
+import { parseAmount, parseExpenseLine, parseNotes, groupNotes } from './parse';
 
 test('parseAmount handles common notations', () => {
   const cases = {
@@ -12,19 +11,19 @@ test('parseAmount handles common notations', () => {
     '1.000.000': 1000000,
   };
   for (const [input, expected] of Object.entries(cases)) {
-    assert.equal(parseAmount(input), expected, input);
+    expect(parseAmount(input), input).toBe(expected);
   }
-  assert.equal(parseAmount(''), null);
-  assert.equal(parseAmount('abc'), null);
+  expect(parseAmount('')).toBeNull();
+  expect(parseAmount('abc')).toBeNull();
 });
 
 test('parseExpenseLine finds label and amount', () => {
-  assert.deepEqual(parseExpenseLine('menuisier: 1500'), { label: 'menuisier', amount: 1500 });
-  assert.deepEqual(parseExpenseLine('menuisier 1500'), { label: 'menuisier', amount: 1500 });
-  assert.deepEqual(parseExpenseLine('menuisier - 1 500 dh'), { label: 'menuisier', amount: 1500 });
-  assert.deepEqual(parseExpenseLine('1500 menuisier'), { label: 'menuisier', amount: 1500 });
-  assert.deepEqual(parseExpenseLine('- peinture 2 pots: 300+150'), { label: 'peinture 2 pots', amount: 450 });
-  assert.deepEqual(parseExpenseLine('tissu = 455,50'), { label: 'tissu', amount: 455.5 });
+  expect(parseExpenseLine('menuisier: 1500')).toEqual({ label: 'menuisier', amount: 1500 });
+  expect(parseExpenseLine('menuisier 1500')).toEqual({ label: 'menuisier', amount: 1500 });
+  expect(parseExpenseLine('menuisier - 1 500 dh')).toEqual({ label: 'menuisier', amount: 1500 });
+  expect(parseExpenseLine('1500 menuisier')).toEqual({ label: 'menuisier', amount: 1500 });
+  expect(parseExpenseLine('- peinture 2 pots: 300+150')).toEqual({ label: 'peinture 2 pots', amount: 450 });
+  expect(parseExpenseLine('tissu = 455,50')).toEqual({ label: 'tissu', amount: 455.5 });
 });
 
 test('parseNotes groups projects and expenses', () => {
@@ -39,7 +38,7 @@ tapisserie: 455
 Salon :
 rideaux: 1.200`;
   const groups = groupNotes(parseNotes(text));
-  assert.deepEqual(groups, [
+  expect(groups).toEqual([
     { name: 'project 1', expenses: [{ label: 'menuisier', amount: 1500 }, { label: 'plombier', amount: 800 }] },
     { name: 'project 2', expenses: [{ label: 'tapisserie', amount: 455 }] },
     { name: 'Salon', expenses: [{ label: 'rideaux', amount: 1200 }] },
