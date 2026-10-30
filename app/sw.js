@@ -1,6 +1,7 @@
 // Offline support: app shell cached on install, fonts cached on first use.
-// Bump VERSION on every release so phones pick up the new files.
-const VERSION = 'hsabati-v2';
+// The deploy workflow replaces VERSION with the commit id, so every release
+// changes this file and phones install the new version on next launch.
+const VERSION = 'hsabati-dev';
 const SHELL = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
   'js/main.js', 'js/db.js', 'js/parse.js', 'js/format.js',
@@ -8,7 +9,7 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -32,7 +33,9 @@ self.addEventListener('fetch', e => {
   e.respondWith((async () => {
     const cache = await caches.open(VERSION);
     const hit = await cache.match(req, { ignoreSearch: !isFont });
-    const fresh = fetch(req).then(res => {
+    // no-cache: revalidate with the server instead of reusing the browser's
+    // HTTP cache (GitHub Pages sends max-age=600).
+    const fresh = (isFont ? fetch(req) : fetch(req.url, { cache: 'no-cache' })).then(res => {
       if (res.ok || res.type === 'opaque') cache.put(req, res.clone());
       return res;
     });
