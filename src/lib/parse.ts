@@ -2,10 +2,12 @@
 // and of notes pasted from the phone ("Projet\nmenuisier: 1500\n...").
 
 export type ParsedExpense = { label: string; amount: number };
+
+/** One non-blank line of pasted notes. */
 export type NoteLine =
-  | { type: 'expense'; raw: string; label: string; amount: number }
-  | { type: 'header'; raw: string; name: string };
-export type NoteGroup = { name: string; expenses: ParsedExpense[] };
+  | { type: 'amount'; raw: string; label: string; amount: number }
+  | { type: 'header'; raw: string; name: string }
+  | { type: 'section'; raw: string; kind: 'income' | 'expense' };
 
 const CURRENCY = /\b(dhs?|mad|dirhams?)\b|dh/gi;
 
@@ -97,11 +99,17 @@ function tidyLabel(s: string): string {
   return s.replace(/[\s:=\-–]+$/, '').replace(/^[\s:=\-–]+/, '').trim();
 }
 
+// "Recettes", "Entrées :" switch the following amounts to income; "Dépenses"
+// alone switches back. "Dépenses Tulip" is a header for « Tulip ».
+const INCOME_SECTION = /^(recettes?|entr[ée]es?|rentr[ée]es?)\s*:?$/i;
+const EXPENSE_SECTION = /^(d[ée]penses?|sorties?)\s*:?$/i;
+const EXPENSE_PREFIX = /^d[ée]penses?\s+/i;
+
 /**
- * Parse a pasted note into a list of lines classified as project headers or
- * expenses. A line is an expense when it has "label: amount", or a label with
- * an amount ≥ 10 at the end/start. Anything else that is not blank is a header
- * ("project 1", "Cuisine", "Salon :"). The UI lets the user flip any line.
+ * Parse a pasted note into lines. A line is an amount when it has
+ * "label: amount", or a label with an amount ≥ 10 at the end/start.
+ * Anything else that is not blank is a section or a header ("Salon",
+ * "project 1", "Dépenses Tulip"). The UI lets the user flip any line.
  */
 export function parseNotes(text: string): NoteLine[] {
   const out: NoteLine[] = [];
@@ -111,29 +119,59 @@ export function parseNotes(text: string): NoteLine[] {
     const exp = parseExpenseLine(line);
     const hasColonAmount = /:\s*\S/.test(line) && exp != null;
     if (exp && (hasColonAmount || exp.amount >= 10)) {
-      out.push({ type: 'expense', raw: line, label: exp.label, amount: exp.amount });
+      out.push({ type: 'amount', raw: line, label: exp.label, amount: exp.amount });
+    } else if (INCOME_SECTION.test(line)) {
+      out.push({ type: 'section', raw: line, kind: 'income' });
+    } else if (EXPENSE_SECTION.test(line)) {
+      out.push({ type: 'section', raw: line, kind: 'expense' });
     } else {
-      out.push({ type: 'header', raw: line, name: line.replace(/[:\s]+$/, '') });
+      out.push({ type: 'header', raw: line, name: headerName(line) });
     }
   }
   return out;
 }
 
-/** Group parsed lines into [{ name, expenses: [{label, amount}] }]. */
-export function groupNotes(lines: NoteLine[]): NoteGroup[] {
+export const headerName = (line: string) => line.replace(/[:\s]+$/, '').replace(EXPENSE_PREFIX, '').trim() || line.trim();
+
+/** A header becomes a caisse (if one has that name) or a poste. */
+export type NoteGroup = {
+  name: string;
+  kind: 'fund' | 'project';
+  expenses: ParsedExpense[];
+  incomes: ParsedExpense[];
+};
+
+export type LineRole = 'header' | 'section' | 'expense' | 'income';
+
+/**
+ * Walk the lines with the current header and section as context:
+ * amounts are expenses of the current poste, or incomes in a Recettes
+ * section (for a poste, they go to its caisse). Returns the groups and, for
+ * each line, its role and group index (for the preview).
+ */
+export function planNotes(lines: NoteLine[], isFund: (name: string) => boolean = () => false) {
   const groups: NoteGroup[] = [];
-  let current: NoteGroup | null = null;
+  const roles: { role: LineRole; group: number }[] = [];
+  let current = -1;
+  let mode: 'income' | 'expense' = 'expense';
   for (const l of lines) {
     if (l.type === 'header') {
-      current = { name: l.name, expenses: [] };
-      groups.push(current);
+      groups.push({ name: l.name, kind: isFund(l.name) ? 'fund' : 'project', expenses: [], incomes: [] });
+      current = groups.length - 1;
+      mode = 'expense';
+      roles.push({ role: 'header', group: current });
+    } else if (l.type === 'section') {
+      mode = l.kind;
+      roles.push({ role: 'section', group: current });
     } else {
-      if (!current) {
-        current = { name: 'Sans projet', expenses: [] };
-        groups.push(current);
+      if (current === -1) {
+        groups.push({ name: 'Sans poste', kind: 'project', expenses: [], incomes: [] });
+        current = 0;
       }
-      current.expenses.push({ label: l.label, amount: l.amount });
+      const entry = { label: l.label, amount: l.amount };
+      if (mode === 'income') groups[current].incomes.push(entry); else groups[current].expenses.push(entry);
+      roles.push({ role: mode, group: current });
     }
   }
-  return groups.filter(g => g.expenses.length);
+  return { groups, roles };
 }

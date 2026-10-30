@@ -1,13 +1,14 @@
 // Tiny IndexedDB store. All data is small enough to keep in memory; every
 // write is persisted immediately.
 
-type StoreName = 'projects' | 'expenses' | 'meta';
-const STORES: StoreName[] = ['projects', 'expenses', 'meta'];
+export type StoreName = 'funds' | 'projects' | 'expenses' | 'incomes' | 'meta';
+const STORES: StoreName[] = ['funds', 'projects', 'expenses', 'incomes', 'meta'];
 
 let dbp: Promise<IDBDatabase> | undefined;
 function open(): Promise<IDBDatabase> {
   dbp ??= new Promise((resolve, reject) => {
-    const req = indexedDB.open('hsabati', 1);
+    const req = indexedDB.open('hsabati', 2);
+    // v2 adds funds and incomes; existing stores are kept as they are.
     req.onupgradeneeded = () => {
       for (const s of STORES) {
         if (!req.result.objectStoreNames.contains(s)) req.result.createObjectStore(s, { keyPath: 'id' });

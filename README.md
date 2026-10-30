@@ -1,14 +1,20 @@
 # Hsabati
 
-Une petite app pour noter ses dépenses par projet, en deux secondes.
+Une petite app pour suivre l'argent reçu et dépensé, en deux secondes.
 Elle s'installe sur le téléphone comme une vraie app (PWA), marche hors ligne
 et garde les données sur le téléphone.
 
-- **Saisie express** : l'app s'ouvre directement sur le pavé numérique,
-  le dernier projet est déjà sélectionné. Montant → Ajouter.
-- **Projets & budgets** : progression, reste, dépassement.
-- **Importer mes notes** : collez vos notes (`menuisier: 1500`, `plombier 800 dh`,
-  `peinture 300+150`, `1 200,50`…), les projets et montants sont reconnus.
+- **Caisses** : l'argent arrive dans une caisse (ex. Maison, Investissement).
+  Chaque caisse affiche **Reçu · Dépensé · Solde**.
+- **Postes** : on dépense sur un poste d'une caisse (Alimentation, Maison
+  Tulip…), avec un budget facultatif.
+- **Saisie express** : l'app s'ouvre sur le pavé numérique, en mode
+  **Dépense** (dernier poste déjà choisi) ; un bouton **Recette** pour l'argent
+  reçu.
+- **Importer mes notes** : collez vos notes ; les titres deviennent des postes
+  (« Dépenses Tulip » → Tulip), une ligne « Recettes » fait passer les montants
+  suivants en recettes, et les montants sont reconnus (`1500`, `1 200,50 dh`,
+  `300+150`, `1,5k`…).
 - **Sauvegarde** : un fichier à envoyer sur Google Drive / WhatsApp, export CSV
   pour Excel, restauration.
 
@@ -36,8 +42,11 @@ Organisation :
 
 - `src/lib/` : données (`store.ts`, IndexedDB dans `db.ts`), parseur de notes,
   navigation / feuilles / toast (`ui.ts`), service worker (`sw.ts`)
-- `src/screens/` : Ajouter, Projets (liste et détail), Réglages
-- `src/components/` : icônes, anneau de budget, feuilles (projet, choix, import)
+- `src/screens/` : Ajouter (dépense / recette), Caisses (liste, caisse, poste), Réglages
+- `src/components/` : icônes, anneau de budget, feuilles (poste, caisse, choix, import)
+
+Dans le code : `Fund` = caisse, `Project` = poste, `Income` = recette,
+`Expense` = dépense (voir `src/lib/types.ts`).
 
 ## Déploiement (GitHub Pages)
 

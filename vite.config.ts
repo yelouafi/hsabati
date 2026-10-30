@@ -30,7 +30,7 @@ export default defineConfig({
         ],
         shortcuts: [
           { name: 'Nouvelle dépense', url: './#/', icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
-          { name: 'Mes projets', url: './#/projets', icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
+          { name: 'Mes caisses', url: './#/caisses', icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
         ],
       },
       workbox: {

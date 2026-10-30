@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals';
 import type { ComponentChild } from 'preact';
-import { backupData, liveExpenses, now, saveSettings } from './store';
+import { backupCountNow, backupData, now, saveSettings } from './store';
 import { todayISO } from './format';
 
 // ---------------------------------------------------------------- router
@@ -108,6 +108,6 @@ export async function shareOrDownload(name: string, type: string, content: strin
 
 export async function exportBackup(): Promise<void> {
   if (await shareOrDownload(`hsabati-${todayISO()}.json`, 'application/json', JSON.stringify(backupData()))) {
-    await saveSettings({ lastBackupAt: now(), backupCount: liveExpenses.value.length });
+    await saveSettings({ lastBackupAt: now(), backupCount: backupCountNow() });
   }
 }

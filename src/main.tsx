@@ -18,7 +18,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 await load();
-if (!/^#\/(projets|projet\/.+|reglages|modifier\/.+)?$/.test(hash.value)) location.replace('#/');
+if (!/^#\/(caisses|projets|(caisse|poste|projet|modifier)\/.+|reglages)?$/.test(hash.value)) location.replace('#/');
 render(<App />, document.getElementById('app')!);
 persist();
 registerServiceWorker();

@@ -1,6 +1,6 @@
 import { todayISO } from '../lib/format';
 import {
-  lastBackupText, liveExpenses, mergeIn, projectById, saveSettings, settings,
+  fundById, lastBackupText, liveExpenses, liveIncomes, mergeIn, projectById, saveSettings, settings,
 } from '../lib/store';
 import { exportBackup, openSheet, shareOrDownload, toast } from '../lib/ui';
 import { plural } from '../components/common';
@@ -23,12 +23,20 @@ export const ACCENTS = [
 
 function exportCSV() {
   const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
-  const rows = [['Date', 'Projet', 'Note', 'Montant (MAD)'].join(';')];
-  const list = liveExpenses.value.filter(e => projectById(e.projectId)).sort((a, b) => a.date.localeCompare(b.date));
-  for (const e of list) {
-    rows.push([e.date, esc(projectById(e.projectId)!.name), esc(e.note), String(e.amount).replace('.', ',')].join(';'));
+  const num = (n: number) => String(n).replace('.', ',');
+  type Row = { date: string; cols: string[] };
+  const rows: Row[] = [];
+  for (const e of liveExpenses.value) {
+    const p = projectById(e.projectId);
+    if (p) rows.push({ date: e.date, cols: [esc(fundById(p.fundId)?.name ?? ''), esc(p.name), 'Dépense', esc(e.note), num(-e.amount)] });
   }
-  shareOrDownload(`hsabati-${todayISO()}.csv`, 'text/csv', '﻿' + rows.join('\r\n'));
+  for (const i of liveIncomes.value) {
+    const f = fundById(i.fundId);
+    if (f) rows.push({ date: i.date, cols: [esc(f.name), '', 'Recette', esc(i.note), num(i.amount)] });
+  }
+  rows.sort((a, b) => a.date.localeCompare(b.date));
+  const lines = [['Date', 'Caisse', 'Poste', 'Type', 'Note', 'Montant (MAD)'].join(';'), ...rows.map(r => [r.date, ...r.cols].join(';'))];
+  shareOrDownload(`hsabati-${todayISO()}.csv`, 'text/csv', '\ufeff' + lines.join('\r\n'));
 }
 
 async function restore(e: Event) {
@@ -47,7 +55,8 @@ async function restore(e: Event) {
 }
 
 export function SettingsScreen() {
-  const n = liveExpenses.value.length;
+  const nExp = liveExpenses.value.length;
+  const nInc = liveIncomes.value.length;
   return (
     <section class="page">
       <header class="page-head"><h1>Réglages</h1></header>
@@ -80,14 +89,14 @@ export function SettingsScreen() {
 
       <div class="card block">
         <h2>Importer mes notes</h2>
-        <p class="muted">Collez vos notes du téléphone : les projets et les montants sont reconnus automatiquement.</p>
+        <p class="muted">Collez vos notes du téléphone : postes, recettes et montants sont reconnus automatiquement.</p>
         <button class="btn-soft" onClick={() => openSheet(<ImportNotes />)}>Coller mes notes</button>
       </div>
 
       <div class="card block">
         <h2>Sauvegarde</h2>
         <p class="muted">
-          {plural(n, 'dépense')} enregistrée{n > 1 ? 's' : ''} sur ce téléphone.
+          {plural(nExp, 'dépense')} et {plural(nInc, 'recette')} sur ce téléphone.
           Envoyez une copie sur Google Drive (ou WhatsApp) de temps en temps.
         </p>
         <p class="muted small">{lastBackupText()}</p>
