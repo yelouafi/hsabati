@@ -1,6 +1,6 @@
 // Offline support: app shell cached on install, fonts cached on first use.
 // Bump VERSION on every release so phones pick up the new files.
-const VERSION = 'hsabati-v1';
+const VERSION = 'hsabati-v2';
 const SHELL = [
   './', 'index.html', 'style.css', 'manifest.webmanifest',
   'js/main.js', 'js/db.js', 'js/parse.js', 'js/format.js',

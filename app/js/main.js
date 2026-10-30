@@ -667,7 +667,11 @@ function importNotesSheet() {
   openSheet(`
     <h2>Importer mes notes</h2>
     <form class="form">
-      <textarea rows="7" placeholder="Salon&#10;menuisier: 1500&#10;peinture 300+150&#10;&#10;Cuisine&#10;plombier : 1 200 dh"></textarea>
+      <div class="paste-box">
+        <textarea rows="6" placeholder="Collez vos notes ici…"></textarea>
+        <button type="button" class="btn-soft paste-btn" data-paste hidden>Coller</button>
+      </div>
+      <p class="muted small example">Par exemple :<br><b>Salon</b><br>menuisier: 1500<br>peinture 300+150</p>
       <label>Date de ces dépenses<input type="date" name="date" value="${todayISO()}" max="${todayISO()}"></label>
       <div class="preview"></div>
       <div class="form-actions">
@@ -679,12 +683,16 @@ function importNotesSheet() {
     const area = $('textarea', panel);
     const preview = $('.preview', panel);
     const btn = $('.btn-primary', panel);
+    const pasteBtn = $('[data-paste]', panel);
+    const example = $('.example', panel);
 
     const draw = () => {
       const groups = groupNotes(lines);
       const nExp = groups.reduce((t, g) => t + g.expenses.length, 0);
       btn.disabled = !nExp;
       btn.textContent = nExp ? `Importer ${nExp} dépense${nExp > 1 ? 's' : ''}` : 'Importer';
+      pasteBtn.hidden = !navigator.clipboard?.readText || !!area.value;
+      example.hidden = !!area.value;
       preview.innerHTML = lines.length ? `
         <p class="muted small">Touchez une ligne si elle est mal reconnue.</p>
         ${lines.map((l, i) => l.type === 'header'
@@ -692,6 +700,16 @@ function importNotesSheet() {
           : `<button type="button" class="pv" data-i="${i}"><span>${h(l.label) || '<i class="muted">sans note</i>'}</span><b>${money(l.amount)}</b></button>`).join('')}` : '';
     };
     area.addEventListener('input', () => { lines = parseNotes(area.value); draw(); });
+    pasteBtn.addEventListener('click', async () => {
+      try {
+        area.value = await navigator.clipboard.readText();
+        area.dispatchEvent(new Event('input'));
+      } catch {
+        area.focus();
+        toast('Appuyez longuement dans la zone puis « Coller »');
+      }
+    });
+    draw();
     preview.addEventListener('click', e => {
       const i = e.target.closest('[data-i]')?.dataset.i;
       if (i == null) return;
