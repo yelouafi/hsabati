@@ -159,7 +159,10 @@ function AmountZone({ value, amount, project, editing, hasProjects }: {
       hint = `${project.name} · ${money0(before + amount)} MAD au total`;
     }
   }
-  const size = shown.length > 8 ? 'xlong' : shown.length > 5 ? 'long' : '';
+  // Size steps on the whole-number digits only, so typing decimals never
+  // resizes. Each step fits its widest value (…,99) on a 360px-wide phone.
+  const digits = value.split(',')[0].length;
+  const size = digits > 7 ? 'xlong' : digits > 5 ? 'long' : '';
   return (
     <div class="amount-zone">
       <div class="amount" aria-live="polite">
