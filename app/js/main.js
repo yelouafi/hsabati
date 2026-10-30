@@ -762,5 +762,19 @@ await load();
 route();
 db.persist();
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  navigator.serviceWorker.register('sw.js');
+  const hadController = !!navigator.serviceWorker.controller;
+  const started = Date.now();
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    // Home-screen apps are resumed rather than relaunched: check on resume too.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') reg.update().catch(() => {});
+    });
+  });
+  // A new version took over: reload to show it, unless she is mid-entry.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) return;
+    const busy = state.draft.amount || !sheet.hidden;
+    if (!busy || Date.now() - started < 3000) location.reload();
+    else toast('Nouvelle version disponible', { label: 'Mettre à jour', run: () => location.reload() });
+  });
 }
