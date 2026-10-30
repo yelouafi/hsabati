@@ -3,7 +3,7 @@ import { parseAmount } from '../lib/parse';
 import { aiPrompt, parseImport, type ImportEntry, type ImportError, type ImportPoste } from '../lib/importFormat';
 import { money, money0, todayISO } from '../lib/format';
 import {
-  PROJECT_COLORS, activeFunds, budgetStatus, expensesOf, findFundByName, findProjectByName, fundById, fundIsEmpty,
+  PROJECT_COLORS, activeFunds, budgetStatus, createFund, deleteFund, dropUnusedStarter, expensesOf, findFundByName, findProjectByName, fundById, fundIsEmpty,
   fundStatus, liveFunds, liveProjects, newExpense, newFund, newIncome, newProject, now, projectsOf,
   saveExpense, saveFund, saveIncome, saveProject, settings,
 } from '../lib/store';
@@ -73,6 +73,9 @@ export function ProjectForm({ project, fundId, onSaved }: { project?: Project; f
   const [fund, setFund] = useState<FundChoice>({ fundId: project?.fundId ?? fundId ?? defaultFundId(), newName: '' });
   const [budget, setBudget] = useState(project?.budget ? money(project.budget) : '');
   const [color, setColor] = useState(project?.color ?? PROJECT_COLORS[liveProjects.value.length % PROJECT_COLORS.length]);
+  // A new poste only needs a name; caisse (when there is a choice), budget
+  // and colour wait behind « Plus d'options ».
+  const [more, setMore] = useState(editing);
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -117,11 +120,15 @@ export function ProjectForm({ project, fundId, onSaved }: { project?: Project; f
           <input ref={nameRef} required maxLength={40} placeholder="ex. Alimentation, Maison Tulip…" value={name}
             onInput={e => setName(e.currentTarget.value)} />
         </label>
-        <FundField value={fund} onChange={setFund} />
-        <label>Budget (MAD, facultatif)
-          <input inputMode="decimal" placeholder="ex. 20 000" value={budget} onInput={e => setBudget(e.currentTarget.value)} />
-        </label>
-        <Swatches value={color} onChange={setColor} />
+        {(more || activeFunds.value.length > 1 || !fund.fundId) && <FundField value={fund} onChange={setFund} />}
+        {more ? (
+          <>
+            <label>Budget (MAD, facultatif)
+              <input inputMode="decimal" placeholder="ex. 20 000" value={budget} onInput={e => setBudget(e.currentTarget.value)} />
+            </label>
+            <Swatches value={color} onChange={setColor} />
+          </>
+        ) : <button type="button" class="link more-options" onClick={() => setMore(true)}>Plus d’options (budget, couleur…)</button>}
         <div class="form-actions">
           {project ? (
             <span class="side-actions">
@@ -155,20 +162,20 @@ export function FundForm({ fund, onSaved }: { fund?: Fund; onSaved?: (f: Fund) =
     e.preventDefault();
     if (!name.trim()) return;
     const fields = { name: name.trim(), color };
-    const saved = await saveFund(fund ? { ...fund, ...fields } : { ...newFund(fields.name), ...fields });
+    const saved = fund ? await saveFund({ ...fund, ...fields }) : (await createFund({ ...newFund(fields.name), ...fields })).fund;
     await closeSheet();
     onSaved?.(saved);
-    if (!editing) toast(<>Caisse <b>{saved.name}</b> créée</>);
+    if (!editing) toast(<>Caisse <b>{saved.name}</b> créée, avec un poste <b>Divers</b></>);
   };
 
   const remove = async () => {
     if (!fund) return;
     if (!canDelete) {
-      toast('Une caisse avec des postes ou des recettes ne peut pas être supprimée : archivez-la.');
+      toast('Une caisse avec des dépenses ou des recettes ne peut pas être supprimée : archivez-la.');
       return;
     }
     if (!confirm(`Supprimer la caisse « ${fund.name} » ?`)) return;
-    await saveFund({ ...fund, deleted: true });
+    await deleteFund(fund);
     await closeSheet();
     go('#/caisses');
   };
@@ -309,6 +316,7 @@ export function ImportNotes() {
         await saveExpense(newExpense({ projectId: poste.id, amount: x.amount, note: x.note, date: day(x) }, now() + n++));
       }
     }
+    await dropUnusedStarter(fundId);
     await closeSheet();
     toast(`${label.replace(' + ', ' et ')} importée${n > 1 ? 's' : ''} ✿`);
     go(`#/caisse/${fundId}`);

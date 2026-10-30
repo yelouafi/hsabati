@@ -79,8 +79,8 @@ export function fundStatus(f: Fund): FundStatus {
   return { received, spent, solde: Math.round((received - spent) * 100) / 100 };
 }
 
-/** A caisse can be deleted only when nothing depends on it. */
-export const fundIsEmpty = (f: Fund) => !projectsOf(f.id).length && !incomesOf(f.id).length;
+/** A caisse can be deleted only when nothing was recorded in it (empty postes don't count). */
+export const fundIsEmpty = (f: Fund) => !incomesOf(f.id).length && projectsOf(f.id).every(p => !expensesOf(p.id).length);
 
 // ---------------------------------------------------------------- actions
 
@@ -95,6 +95,35 @@ export async function load(): Promise<void> {
   incomes.value = is;
   const saved = meta.find(m => m.id === 'settings');
   if (saved) settings.value = { ...settings.value, ...saved };
+  if (!liveFunds.value.length) await seedStarter();
+}
+
+/**
+ * A first launch gets the caisse « Maison » with the poste « Divers », so she
+ * can type an amount and save right away, before learning any of the words.
+ */
+async function seedStarter(): Promise<void> {
+  const { fund, poste } = await createFund({ ...newFund('Maison'), starter: true });
+  await saveSettings({ lastFundId: fund.id, lastProjectId: poste.id });
+}
+
+/** A new caisse comes with a « Divers » poste, so it can take dépenses right away. */
+export async function createFund(f: Fund): Promise<{ fund: Fund; poste: Project }> {
+  const fund = await saveFund(f);
+  return { fund, poste: await saveProject(newProject('Divers', 0, fund.id)) };
+}
+
+/** Delete a caisse along with its postes (only when fundIsEmpty). */
+export async function deleteFund(f: Fund): Promise<void> {
+  for (const p of projectsOf(f.id)) await saveProject({ ...p, deleted: true });
+  await saveFund({ ...f, deleted: true });
+}
+
+/** Remove the starter caisse while still unused, e.g. once real data is restored or imported elsewhere. */
+export async function dropUnusedStarter(keepFundId?: string): Promise<void> {
+  for (const f of liveFunds.value) {
+    if (f.starter && f.id !== keepFundId && fundIsEmpty(f)) await deleteFund(f);
+  }
 }
 
 function upsert<T extends { id: string }>(list: T[], rec: T): T[] {
@@ -180,6 +209,7 @@ export async function mergeIn(data: Backup): Promise<number> {
   projects.value = await merge('projects', projects.value, data.projects);
   expenses.value = await merge('expenses', expenses.value, data.expenses);
   incomes.value = await merge('incomes', incomes.value, data.incomes);
+  if (data.funds?.some(f => !f.deleted)) await dropUnusedStarter();
   return changed;
 }
 
@@ -190,6 +220,7 @@ export async function eraseAll(): Promise<void> {
   projects.value = [];
   expenses.value = [];
   incomes.value = [];
+  await seedStarter();
 }
 
 export function backupData(): Backup {

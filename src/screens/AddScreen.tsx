@@ -193,7 +193,7 @@ function AddForm({ draft, editing }: { draft: Signal<Draft>; editing?: Editing }
         <Chips items={projects} selected={d.projectId} onSelect={id => set({ projectId: id })} label="Poste"
           lastUse={id => Math.max(0, ...expensesOf(id).map(e => e.createdAt), projectById(id)?.createdAt ?? 0)}
           firstLabel="+ Créer mon premier poste" pickTitle="Choisir un poste"
-          onNew={() => openSheet(<ProjectForm onSaved={p => set({ projectId: p.id })} />)} />
+          onNew={() => openSheet(<ProjectForm fundId={project?.fundId} onSaved={p => set({ projectId: p.id })} />)} />
       )}
 
       <NoteInput value={d.note} onChange={note => set({ note })}
@@ -227,7 +227,8 @@ function AmountDisplay({ value, sign }: { value: string; sign?: string }) {
 
 /** "Maison · solde 3 650 MAD", red when the caisse goes negative. */
 function SoldeLine({ fund, delta }: { fund?: Fund; delta: number }) {
-  if (!fund) return null;
+  // No recette yet: a solde would only ever be negative, and means nothing.
+  if (!fund || !incomesOf(fund.id).length) return null;
   const solde = fundStatus(fund).solde + delta;
   return <p class={`amount-solde ${solde < 0 ? 'over' : ''}`}>{fund.name} · solde {money0(solde)} MAD</p>;
 }

@@ -10,7 +10,10 @@ et garde les données sur le téléphone.
   Tulip…), avec un budget facultatif.
 - **Saisie express** : l'app s'ouvre sur le pavé numérique, en mode
   **Dépense** (dernier poste déjà choisi) ; un bouton **Recette** pour l'argent
-  reçu.
+  reçu. Au premier lancement, la caisse **Maison** et son poste **Divers** sont
+  déjà là : on tape un montant et on enregistre. Tant qu'elle reste vide, cette
+  caisse de départ disparaît d'elle-même si on restaure une sauvegarde ou si on
+  importe dans une autre caisse.
 - **Importer mes notes** : dans une caisse choisie, un format simple et sans
   ambiguïté (les notes en désordre se remettent d'abord au propre avec une IA :
   bouton « Copier les instructions pour l'IA ») :
