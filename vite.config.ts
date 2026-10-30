@@ -15,7 +15,7 @@ export default defineConfig({
       manifest: {
         name: 'Hsabati — mes dépenses',
         short_name: 'Hsabati',
-        description: 'Mes dépenses par projet, en deux secondes.',
+        description: 'Mes caisses et mes dépenses, en deux secondes.',
         lang: 'fr',
         start_url: './#/',
         scope: './',
@@ -30,7 +30,7 @@ export default defineConfig({
         ],
         shortcuts: [
           { name: 'Nouvelle dépense', url: './#/', icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
-          { name: 'Mes projets', url: './#/projets', icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
+          { name: 'Mes caisses', url: './#/caisses', icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
         ],
       },
       workbox: {

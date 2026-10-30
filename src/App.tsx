@@ -4,27 +4,28 @@ import { applyTheme } from './lib/theme';
 import { closeSheet, hash, hideToast, sheetContent, sheetOpen, toastState, toastVisible } from './lib/ui';
 import { Icon } from './components/common';
 import { AddScreen } from './screens/AddScreen';
-import { ProjectScreen, ProjectsScreen } from './screens/ProjectsScreen';
+import { FundScreen, FundsScreen, ProjectScreen } from './screens/FundsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 
 function Screen({ path }: { path: string }) {
   let m: RegExpMatchArray | null;
   if ((m = path.match(/^#\/modifier\/(.+)$/))) return <AddScreen key={m[1]} editId={m[1]} />;
-  if (path === '#/projets') return <ProjectsScreen />;
-  if ((m = path.match(/^#\/projet\/(.+)$/))) return <ProjectScreen id={m[1]} />;
+  if (path === '#/caisses') return <FundsScreen />;
+  if ((m = path.match(/^#\/caisse\/(.+)$/))) return <FundScreen id={m[1]} />;
+  if ((m = path.match(/^#\/poste\/(.+)$/))) return <ProjectScreen id={m[1]} />;
   if (path === '#/reglages') return <SettingsScreen />;
   return <AddScreen />;
 }
 
 const TABS = [
   { href: '#/', tab: 'add', label: 'Ajouter', icon: Icon.plus },
-  { href: '#/projets', tab: 'projects', label: 'Projets', icon: Icon.pie },
+  { href: '#/caisses', tab: 'funds', label: 'Caisses', icon: Icon.pie },
   { href: '#/reglages', tab: 'settings', label: 'Réglages', icon: Icon.heart },
 ];
 
 export function App() {
   const path = hash.value;
-  const tab = path.startsWith('#/projet') ? 'projects' : path.startsWith('#/reglages') ? 'settings' : 'add';
+  const tab = /^#\/(caisse|poste)/.test(path) ? 'funds' : path.startsWith('#/reglages') ? 'settings' : 'add';
 
   useEffect(() => { document.documentElement.dataset.accent = settings.value.accent; }, [settings.value.accent]);
   useEffect(() => applyTheme(settings.value.theme ?? 'auto'), [settings.value.theme]);

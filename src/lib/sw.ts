@@ -24,7 +24,4 @@ export function registerServiceWorker(): void {
     if (!busy || Date.now() - started < 3000) location.reload();
     else toast('Nouvelle version disponible', { label: 'Mettre à jour', run: () => location.reload() });
   });
-
-  // Caches of the hand-written service worker used before the Vite build.
-  caches.keys().then(keys => keys.filter(k => k.startsWith('hsabati-')).forEach(k => caches.delete(k)));
 }

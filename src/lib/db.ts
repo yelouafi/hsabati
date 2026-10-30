@@ -1,13 +1,13 @@
 // Tiny IndexedDB store. All data is small enough to keep in memory; every
 // write is persisted immediately.
 
-type StoreName = 'projects' | 'expenses' | 'meta';
-const STORES: StoreName[] = ['projects', 'expenses', 'meta'];
+export type StoreName = 'funds' | 'projects' | 'expenses' | 'incomes' | 'meta';
+const STORES: StoreName[] = ['funds', 'projects', 'expenses', 'incomes', 'meta'];
 
 let dbp: Promise<IDBDatabase> | undefined;
 function open(): Promise<IDBDatabase> {
   dbp ??= new Promise((resolve, reject) => {
-    const req = indexedDB.open('hsabati', 1);
+    const req = indexedDB.open('hsabati', 2);
     req.onupgradeneeded = () => {
       for (const s of STORES) {
         if (!req.result.objectStoreNames.contains(s)) req.result.createObjectStore(s, { keyPath: 'id' });
@@ -31,6 +31,7 @@ async function tx<T>(store: StoreName, mode: IDBTransactionMode, fn: (s: IDBObje
 
 export const getAll = <T>(store: StoreName) => tx<T[]>(store, 'readonly', s => s.getAll());
 export const put = (store: StoreName, rec: object) => tx(store, 'readwrite', s => { s.put(rec); });
+export const clearAll = () => Promise.all(STORES.map(s => tx(s, 'readwrite', st => { st.clear(); })));
 export const putMany = (store: StoreName, recs: object[]) => tx(store, 'readwrite', s => { recs.forEach(r => s.put(r)); });
 
 export function uid(): string {
