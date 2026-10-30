@@ -358,8 +358,7 @@ h2 { font-size: 18px; }
 .pv-head em { font: 800 11px var(--sans); font-style: normal; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: 2px; }
 .pv-income b { color: var(--income); }
 .pv small { font-weight: 600; }
-.pv-caisse { display: flex; flex-direction: column; gap: 4px; }
-.pv-poste { display: flex; flex-direction: column; gap: 4px; margin-left: 10px; }
+.pv-poste { display: flex; flex-direction: column; gap: 4px; }
 .format-help { background: var(--surface); box-shadow: var(--shadow); border-radius: 16px; padding: 12px 14px; }
 .format-help summary { font-weight: 800; cursor: pointer; color: color-mix(in srgb, var(--accent) 80%, var(--ink)); }
 .format-help pre { margin: 10px 0 6px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font: 600 14px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; }
