@@ -44,28 +44,16 @@ function FundNumbers({ fund, large }: { fund: Fund; large?: boolean }) {
 }
 
 function FundCard({ fund: f }: { fund: Fund }) {
-  const postes = projectsOf(f.id).filter(p => !p.archived);
+  const n = projectsOf(f.id).filter(p => !p.archived).length;
   return (
-    <div class="card fund-card" style={{ '--c': f.color }}>
-      <a class="fund-head" href={`#/caisse/${f.id}`}>
+    <a class="card fund-card" href={`#/caisse/${f.id}`} style={{ '--c': f.color }}>
+      <div class="fund-head">
         <strong><i />{f.name}</strong>
+        <span class="muted small">{n ? plural(n, 'poste') : ''}</span>
         <Icon.chevron />
-      </a>
+      </div>
       <FundNumbers fund={f} />
-      {postes.length > 0 && (
-        <div class="fund-postes">
-          {postes.map(p => {
-            const b = budgetStatus(p);
-            return (
-              <a key={p.id} class={`row ${b.over ? 'over' : ''}`} href={`#/poste/${p.id}`} style={{ '--c': p.color }}>
-                <span><i />{p.name}</span>
-                <small>{money0(b.spent)}{p.budget ? ` / ${money0(p.budget)}` : ''}</small>
-              </a>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    </a>
   );
 }
 
