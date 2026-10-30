@@ -251,16 +251,19 @@ function renderAdd(editId) {
       ${editing
         ? `<button class="icon-btn" data-act="back" aria-label="Retour">${ICON.back}</button><h1 class="title-sm">Modifier</h1>`
         : `<h1 class="title-sm">Nouvelle dépense</h1>`}
-      <label class="date-chip">
+      <label class="date-chip ${d.date === todayISO() ? '' : 'past'}">
         ${ICON.calendar}<span data-date-label>${h(dayLabel(d.date))}</span>
         <input type="date" value="${d.date}" max="${todayISO()}" aria-label="Date">
       </label>
     </header>
 
-    <div class="amount" aria-live="polite">
-      <span class="amount-value ${d.amount ? '' : 'empty'}">${formatDraft(d.amount)}</span><span class="amount-cur">MAD</span>
+    <div class="amount-zone">
+      <div class="amount" aria-live="polite">
+        <span class="amount-value ${d.amount ? '' : 'empty'}">${formatDraft(d.amount)}</span><span class="amount-cur">MAD</span>
+      </div>
+      <p class="amount-hint" data-hint></p>
+      <div class="meter" hidden><i class="meter-spent"></i><i class="meter-new"></i></div>
     </div>
-    <p class="amount-hint" data-hint></p>
 
     <div class="chips" role="radiogroup" aria-label="Projet">
       ${projects.map(p => `
@@ -272,8 +275,8 @@ function renderAdd(editId) {
     </div>
 
     <input class="note" type="text" placeholder="Note (facultatif) — ex. menuisier" value="${h(d.note)}"
-      enterkeyhint="done" autocomplete="off" list="note-suggestions" maxlength="80">
-    <datalist id="note-suggestions"></datalist>
+      enterkeyhint="done" autocomplete="off" maxlength="80">
+    <div class="suggest" hidden></div>
 
     <div class="keypad">
       ${['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', 'del'].map(k =>
@@ -290,27 +293,56 @@ function renderAdd(editId) {
   const saveBtn = $('[data-act="save"]', view);
   const hint = $('[data-hint]', view);
   const noteInput = $('.note', view);
+  const meter = $('.meter', view);
+  const suggest = $('.suggest', view);
+  let pastNotes = [];
 
   const refresh = () => {
-    valueEl.textContent = formatDraft(d.amount);
+    const shown = formatDraft(d.amount);
+    valueEl.textContent = shown;
     valueEl.classList.toggle('empty', !d.amount);
+    valueEl.classList.toggle('long', shown.length > 5);
+    valueEl.classList.toggle('xlong', shown.length > 8);
     const amount = parseAmount(d.amount) || 0;
     saveBtn.disabled = !(amount > 0 && d.projectId);
     const p = projectById(d.projectId);
+    meter.hidden = !p?.budget;
     if (!p) { hint.textContent = projects.length ? 'Choisissez un projet' : ''; return; }
     const already = editing && editing.projectId === p.id ? editing.amount : 0;
     if (p.budget) {
-      const rest = p.budget - spentOf(p.id) + already - amount;
+      const before = spentOf(p.id) - already;
+      const rest = p.budget - before - amount;
+      // Bar: already spent, then the amount being typed in a lighter shade.
+      const pct = n => `${Math.min(Math.max(n / Math.max(p.budget, before + amount), 0), 1) * 100}%`;
+      meter.style.setProperty('--c', p.color);
+      meter.classList.toggle('over', rest < 0);
+      meter.querySelector('.meter-spent').style.width = pct(before);
+      meter.querySelector('.meter-new').style.width = pct(amount);
       hint.textContent = rest >= 0 ? `${p.name} · il restera ${money0(rest)} MAD` : `${p.name} · dépassement de ${money0(-rest)} MAD`;
       hint.classList.toggle('over', rest < 0);
     } else {
       hint.textContent = `${p.name} · ${money0(spentOf(p.id) - already + amount)} MAD au total`;
       hint.classList.remove('over');
     }
-    // Suggest notes already used on this project.
-    const notes = [...new Set(expensesOf(p.id).sort((a, b) => b.createdAt - a.createdAt).map(e => e.note).filter(Boolean))].slice(0, 12);
-    $('#note-suggestions').innerHTML = notes.map(n => `<option value="${h(n)}">`).join('');
+    pastNotes = [...new Set(expensesOf(p.id).sort((a, b) => b.createdAt - a.createdAt).map(e => e.note).filter(Boolean))];
   };
+
+  // Recent notes of the selected project, filtered by what is typed.
+  const showSuggestions = () => {
+    const q = noteInput.value.trim().toLocaleLowerCase('fr');
+    const list = pastNotes.filter(n => n.toLocaleLowerCase('fr').includes(q) && n.toLocaleLowerCase('fr') !== q).slice(0, 4);
+    suggest.hidden = document.activeElement !== noteInput || !list.length;
+    suggest.innerHTML = list.map(n => `<button type="button">${h(n)}</button>`).join('');
+  };
+  suggest.addEventListener('pointerdown', e => e.preventDefault());
+  suggest.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    noteInput.value = d.note = b.textContent;
+    noteInput.blur();
+  });
+  noteInput.addEventListener('focus', showSuggestions);
+  noteInput.addEventListener('blur', () => { suggest.hidden = true; });
   refresh();
 
   // Keypad: pointerdown for an instant response; long-press on ⌫ clears.
@@ -352,13 +384,14 @@ function renderAdd(editId) {
   addKeyHandler = onKey;
   document.addEventListener('keydown', onKey);
 
-  noteInput.addEventListener('input', () => { d.note = noteInput.value; });
+  noteInput.addEventListener('input', () => { d.note = noteInput.value; showSuggestions(); });
   noteInput.addEventListener('keydown', e => { if (e.key === 'Enter') noteInput.blur(); });
 
   const dateInput = $('.date-chip input', view);
   dateInput.addEventListener('change', () => {
     d.date = dateInput.value || todayISO();
     $('[data-date-label]', view).textContent = dayLabel(d.date);
+    $('.date-chip', view).classList.toggle('past', d.date !== todayISO());
   });
 
   view.querySelector('.chips').addEventListener('click', e => {
@@ -449,8 +482,13 @@ function renderProjects() {
       <div class="summary">
         <span class="muted">Total dépensé</span>
         <strong class="big-num">${money0(totalSpent)} <small>MAD</small></strong>
-        ${totalBudget ? `<span class="muted">sur ${money0(totalBudget)} MAD de budget</span>` : ''}
+        ${totalBudget && budgeted.length === active.length ? `<span class="muted">sur ${money0(totalBudget)} MAD de budget</span>` : ''}
       </div>
+      ${backupDue() ? `
+        <button class="card backup-nudge" data-act="backup">
+          <span><b>Pensez à sauvegarder</b><br><span class="muted">${h(lastBackupText())}</span></span>
+          <span class="btn-soft">Sauvegarder</span>
+        </button>` : ''}
       <div class="list">${active.map(card).join('')}</div>`
     : `<div class="empty-state">
         <div class="empty-art">✿</div>
@@ -467,6 +505,7 @@ function renderProjects() {
 
   view.onclick = e => {
     if (e.target.closest('[data-act="new"]')) projectSheet(null, () => renderProjects());
+    if (e.target.closest('[data-act="backup"]')) exportJSON().then(renderProjects);
   };
 }
 
@@ -593,6 +632,7 @@ function renderSettings() {
     <div class="card block">
       <h2>Sauvegarde</h2>
       <p class="muted">${nExp} dépense${nExp > 1 ? 's' : ''} enregistrée${nExp > 1 ? 's' : ''} sur ce téléphone. Envoyez une copie sur Google Drive (ou WhatsApp) de temps en temps.</p>
+      <p class="muted small">${h(lastBackupText())}</p>
       <div class="btn-row">
         <button class="btn-soft" data-act="export">Sauvegarder</button>
         <button class="btn-soft" data-act="csv">Exporter en tableau</button>
@@ -613,7 +653,7 @@ function renderSettings() {
     }
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'import-notes') importNotesSheet();
-    if (act === 'export') exportJSON();
+    if (act === 'export') exportJSON().then(renderSettings);
     if (act === 'csv') exportCSV();
   };
   $('[data-restore]', view).addEventListener('change', async e => {
@@ -631,25 +671,47 @@ function renderSettings() {
   });
 }
 
+/** Share (or download) a file. Resolves to false if the user cancelled. */
 async function shareOrDownload(name, type, content) {
   const file = new File([content], name, { type });
   try {
     if (navigator.canShare?.({ files: [file] })) {
       await navigator.share({ files: [file], title: name });
-      return;
+      return true;
     }
   } catch (err) {
-    if (err.name === 'AbortError') return;
+    if (err.name === 'AbortError') return false;
   }
   const url = URL.createObjectURL(file);
   const a = Object.assign(document.createElement('a'), { href: url, download: name });
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return true;
 }
 
-function exportJSON() {
+async function exportJSON() {
   const data = { app: 'hsabati', version: 1, exportedAt: new Date().toISOString(), projects: state.projects, expenses: state.expenses };
-  shareOrDownload(`hsabati-${todayISO()}.json`, 'application/json', JSON.stringify(data));
+  if (await shareOrDownload(`hsabati-${todayISO()}.json`, 'application/json', JSON.stringify(data))) {
+    await saveSettings({ lastBackupAt: now(), backupCount: live(state.expenses).length });
+  }
+}
+
+const BACKUP_EVERY = 14 * 24 * 3600 * 1000;
+
+/** Nudge when there are expenses not in a backup and the last one is old. */
+function backupDue() {
+  const n = live(state.expenses).length;
+  if (n < 5 || n === state.settings.backupCount) return false;
+  const last = state.settings.lastBackupAt;
+  const since = last || Math.min(...live(state.expenses).map(e => e.createdAt));
+  return now() - since > BACKUP_EVERY;
+}
+
+function lastBackupText() {
+  const last = state.settings.lastBackupAt;
+  if (!last) return 'Aucune sauvegarde pour l’instant';
+  const days = Math.floor((now() - last) / 86400000);
+  return `Dernière sauvegarde ${days === 0 ? "aujourd'hui" : days === 1 ? 'hier' : `il y a ${days} jours`}`;
 }
 
 function exportCSV() {
@@ -756,6 +818,17 @@ const ICON = {
 };
 
 // ---------------------------------------------------------------- boot
+
+// A backdated entry date should not silently stick around: after 30 min
+// away, new expenses default to today again.
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+  if (hiddenAt && Date.now() - hiddenAt > 30 * 60 * 1000 && state.draft.date !== todayISO()) {
+    state.draft.date = todayISO();
+    if (!location.hash || location.hash === '#/') renderAdd();
+  }
+});
 
 window.addEventListener('hashchange', route);
 await load();
